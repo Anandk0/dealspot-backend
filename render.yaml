@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: dealspot-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealspot-db
+          property: connectionURI
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dealspot-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dealspot-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://dealspot-8w5z.onrender.com
+      - key: PORT
+        value: "8080"
+
+databases:
+  - name: dealspot-db
+    databaseName: dealspot
+    plan: free
