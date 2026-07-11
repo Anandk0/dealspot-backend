@@ -5,47 +5,35 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "otp_records")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class OtpRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String phone;
 
-    @Column(unique = true)
-    private String email;
+    @Column(nullable = false)
+    private String otpCode;
 
     @Column(nullable = false)
-    private String password;
-
-    private String name;
-    private String location;
-    private String district;
-    private String profileImage;
+    private LocalDateTime expiresAt;
 
     @Column(nullable = false)
     @Builder.Default
-    private Boolean phoneVerified = false;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private String role = "USER";
+    private Boolean verified = false;
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    private LocalDateTime updatedAt;
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(expiresAt);
     }
 }
