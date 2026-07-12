@@ -3,9 +3,9 @@ package com.dealspot.service;
 import com.dealspot.entity.Notification;
 import com.dealspot.entity.User;
 import com.dealspot.repository.NotificationRepository;
+import com.dealspot.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +28,7 @@ public class NotificationService {
     }
 
     public Page<Notification> getNotifications(Long userId, int page, int size) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size));
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, PaginationUtil.createPageable(page, size));
     }
 
     public long getUnreadCount(Long userId) {

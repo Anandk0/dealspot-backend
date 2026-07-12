@@ -2,9 +2,9 @@ package com.dealspot.service;
 
 import com.dealspot.entity.*;
 import com.dealspot.repository.*;
+import com.dealspot.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +39,7 @@ public class ChatService {
     }
 
     public Page<Conversation> getMyConversations(Long userId, int page, int size) {
-        return conversationRepository.findByUserId(userId, PageRequest.of(page, size));
+        return conversationRepository.findByUserId(userId, PaginationUtil.createPageable(page, size));
     }
 
     @Transactional
@@ -80,7 +80,7 @@ public class ChatService {
             throw new RuntimeException("Not authorized");
         }
 
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId, PageRequest.of(page, size));
+        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId, PaginationUtil.createPageable(page, size));
     }
 
     @Transactional

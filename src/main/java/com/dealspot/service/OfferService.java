@@ -2,10 +2,11 @@ package com.dealspot.service;
 
 import com.dealspot.entity.*;
 import com.dealspot.repository.*;
+import com.dealspot.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ public class OfferService {
     private final ListingRepository listingRepository;
     private final NotificationService notificationService;
 
+    @Transactional
     public Offer makeOffer(Long listingId, Double amount, String message, User buyer) {
         Listing listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
@@ -43,6 +45,7 @@ public class OfferService {
         return offer;
     }
 
+    @Transactional
     public Offer respondToOffer(Long offerId, String action, User seller) {
         Offer offer = offerRepository.findById(offerId)
                 .orElseThrow(() -> new RuntimeException("Offer not found"));
@@ -69,14 +72,14 @@ public class OfferService {
     }
 
     public Page<Offer> getOffersForListing(Long listingId, int page, int size) {
-        return offerRepository.findByListingIdOrderByCreatedAtDesc(listingId, PageRequest.of(page, size));
+        return offerRepository.findByListingIdOrderByCreatedAtDesc(listingId, PaginationUtil.createPageable(page, size));
     }
 
     public Page<Offer> getMyOffers(Long userId, int page, int size) {
-        return offerRepository.findByBuyerIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size));
+        return offerRepository.findByBuyerIdOrderByCreatedAtDesc(userId, PaginationUtil.createPageable(page, size));
     }
 
     public Page<Offer> getPendingOffersForSeller(Long sellerId, int page, int size) {
-        return offerRepository.findBySellerIdAndStatusOrderByCreatedAtDesc(sellerId, "PENDING", PageRequest.of(page, size));
+        return offerRepository.findBySellerIdAndStatusOrderByCreatedAtDesc(sellerId, "PENDING", PaginationUtil.createPageable(page, size));
     }
 }

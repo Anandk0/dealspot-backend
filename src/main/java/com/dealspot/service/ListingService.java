@@ -5,12 +5,13 @@ import com.dealspot.dto.ListingResponse;
 import com.dealspot.entity.Listing;
 import com.dealspot.entity.User;
 import com.dealspot.repository.ListingRepository;
+import com.dealspot.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final CloudinaryService cloudinaryService;
 
+    @Transactional
     public ListingResponse createListing(ListingRequest request, List<MultipartFile> images, User user) {
         List<String> imageUrls = new ArrayList<>();
         if (images != null) {
@@ -60,7 +62,7 @@ public class ListingService {
     }
 
     public Page<ListingResponse> getListingsByCategory(String category, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PaginationUtil.createPageable(page, size, Sort.by("createdAt").descending());
         return listingRepository.findByCategoryAndStatus(category, "ACTIVE", pageable)
                 .map(ListingResponse::fromEntity);
     }
@@ -74,11 +76,12 @@ public class ListingService {
     }
 
     public Page<ListingResponse> getMyListings(Long userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PaginationUtil.createPageable(page, size, Sort.by("createdAt").descending());
         return listingRepository.findByUserId(userId, pageable)
                 .map(ListingResponse::fromEntity);
     }
 
+    @Transactional
     public ListingResponse updateListing(Long id, ListingRequest request, List<MultipartFile> newImages, User user) {
         Listing listing = listingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
@@ -119,6 +122,7 @@ public class ListingService {
         return ListingResponse.fromEntity(listing);
     }
 
+    @Transactional
     public void deleteListing(Long id, User user) {
         Listing listing = listingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
@@ -153,7 +157,7 @@ public class ListingService {
     }
 
     public Page<ListingResponse> search(String query, String category, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PaginationUtil.createPageable(page, size, Sort.by("createdAt").descending());
         if (category != null && !category.isBlank()) {
             return listingRepository.searchInCategory(query, category, pageable)
                     .map(ListingResponse::fromEntity);

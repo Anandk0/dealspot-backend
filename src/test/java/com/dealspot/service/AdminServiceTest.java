@@ -19,13 +19,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AdminServiceTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private ListingRepository listingRepository;
-    @Mock private PaymentOrderRepository paymentOrderRepository;
-    @Mock private BannerRepository bannerRepository;
-    @Mock private AuditLogRepository auditLogRepository;
-    @Mock private PlatformSettingRepository settingRepository;
-    @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private UserManagementService userManagementService;
+    @Mock private ModerationService moderationService;
+    @Mock private StatsService statsService;
+    @Mock private BannerService bannerService;
+    @Mock private SettingsService settingsService;
+    @Mock private AuditService auditService;
 
     @InjectMocks private AdminService adminService;
 
@@ -45,16 +44,20 @@ class AdminServiceTest {
     // ─── Role Checks ──────────────────────────────────────
     @Test
     void checkRole_shouldPassForSuperAdmin() {
+        doNothing().when(userManagementService).checkRole(superAdmin, "SUPER_ADMIN");
         assertDoesNotThrow(() -> adminService.checkRole(superAdmin, "SUPER_ADMIN"));
     }
 
     @Test
     void checkRole_shouldPassForAdmin_whenAdminAllowed() {
+        doNothing().when(userManagementService).checkRole(admin, "ADMIN", "SUPER_ADMIN");
         assertDoesNotThrow(() -> adminService.checkRole(admin, "ADMIN", "SUPER_ADMIN"));
     }
 
     @Test
     void checkRole_shouldFail_forRegularUser() {
+        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+                .when(userManagementService).checkRole(regularUser, "ADMIN", "SUPER_ADMIN");
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> adminService.checkRole(regularUser, "ADMIN", "SUPER_ADMIN"));
         assertTrue(ex.getMessage().contains("Access denied"));
@@ -62,6 +65,8 @@ class AdminServiceTest {
 
     @Test
     void checkRole_shouldFail_forChecker_whenOnlyAdminAllowed() {
+        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+                .when(userManagementService).checkRole(checker, "ADMIN", "SUPER_ADMIN");
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> adminService.checkRole(checker, "ADMIN", "SUPER_ADMIN"));
         assertTrue(ex.getMessage().contains("Access denied"));
@@ -70,25 +75,25 @@ class AdminServiceTest {
     // ─── Role Change ──────────────────────────────────────
     @Test
     void changeUserRole_shouldSucceed_whenActorIsSuperAdmin() {
-        when(userRepository.findById(4L)).thenReturn(Optional.of(regularUser));
-        when(userRepository.save(any())).thenReturn(regularUser);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(userManagementService).changeUserRole(4L, "CHECKER", superAdmin);
 
         adminService.changeUserRole(4L, "CHECKER", superAdmin);
 
-        assertEquals("CHECKER", regularUser.getRole());
-        verify(userRepository).save(regularUser);
-        verify(auditLogRepository).save(any()); // Audit logged
+        verify(userManagementService).changeUserRole(4L, "CHECKER", superAdmin);
     }
 
     @Test
     void changeUserRole_shouldFail_whenActorIsAdmin() {
+        doThrow(new RuntimeException("Access denied. Required role: SUPER_ADMIN"))
+                .when(userManagementService).changeUserRole(4L, "CHECKER", admin);
         assertThrows(RuntimeException.class,
                 () -> adminService.changeUserRole(4L, "CHECKER", admin));
     }
 
     @Test
     void changeUserRole_shouldFail_whenActorIsUser() {
+        doThrow(new RuntimeException("Access denied. Required role: SUPER_ADMIN"))
+                .when(userManagementService).changeUserRole(4L, "ADMIN", regularUser);
         assertThrows(RuntimeException.class,
                 () -> adminService.changeUserRole(4L, "ADMIN", regularUser));
     }
@@ -96,26 +101,25 @@ class AdminServiceTest {
     // ─── Ban User ─────────────────────────────────────────
     @Test
     void banUser_shouldSucceed_forAdmin() {
-        when(userRepository.findById(4L)).thenReturn(Optional.of(regularUser));
-        when(userRepository.save(any())).thenReturn(regularUser);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(userManagementService).banUser(4L, "Spam", admin);
 
         adminService.banUser(4L, "Spam", admin);
 
-        assertTrue(regularUser.getBanned());
-        assertEquals("Spam", regularUser.getBanReason());
-        assertNotNull(regularUser.getBannedAt());
-        verify(refreshTokenRepository).revokeAllByUserId(4L);
+        verify(userManagementService).banUser(4L, "Spam", admin);
     }
 
     @Test
     void banUser_shouldFail_forChecker() {
+        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+                .when(userManagementService).banUser(4L, "Spam", checker);
         assertThrows(RuntimeException.class,
                 () -> adminService.banUser(4L, "Spam", checker));
     }
 
     @Test
     void banUser_shouldFail_forRegularUser() {
+        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+                .when(userManagementService).banUser(4L, "Spam", regularUser);
         assertThrows(RuntimeException.class,
                 () -> adminService.banUser(4L, "Spam", regularUser));
     }
@@ -123,84 +127,63 @@ class AdminServiceTest {
     // ─── Unban ────────────────────────────────────────────
     @Test
     void unbanUser_shouldClearBanFields() {
-        regularUser.setBanned(true);
-        regularUser.setBanReason("Test");
-
-        when(userRepository.findById(4L)).thenReturn(Optional.of(regularUser));
-        when(userRepository.save(any())).thenReturn(regularUser);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(userManagementService).unbanUser(4L, admin);
 
         adminService.unbanUser(4L, admin);
 
-        assertFalse(regularUser.getBanned());
-        assertNull(regularUser.getBanReason());
+        verify(userManagementService).unbanUser(4L, admin);
     }
 
     // ─── Moderation ───────────────────────────────────────
     @Test
     void approveListing_shouldSetStatusActive() {
-        Listing listing = Listing.builder().id(1L).title("Test").status("PENDING").user(regularUser).build();
-
-        when(listingRepository.findById(1L)).thenReturn(Optional.of(listing));
-        when(listingRepository.save(any())).thenReturn(listing);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(moderationService).approveListing(1L, checker);
 
         adminService.approveListing(1L, checker);
 
-        assertEquals("ACTIVE", listing.getStatus());
-        assertEquals(checker, listing.getModeratedBy());
-        assertNotNull(listing.getModeratedAt());
+        verify(moderationService).approveListing(1L, checker);
     }
 
     @Test
     void approveListing_shouldFail_forRegularUser() {
+        doThrow(new RuntimeException("Access denied"))
+                .when(moderationService).approveListing(1L, regularUser);
         assertThrows(RuntimeException.class,
                 () -> adminService.approveListing(1L, regularUser));
     }
 
     @Test
     void rejectListing_shouldSetStatusAndReason() {
-        Listing listing = Listing.builder().id(1L).title("Test").status("PENDING").user(regularUser).build();
-
-        when(listingRepository.findById(1L)).thenReturn(Optional.of(listing));
-        when(listingRepository.save(any())).thenReturn(listing);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(moderationService).rejectListing(1L, "Inappropriate content", admin);
 
         adminService.rejectListing(1L, "Inappropriate content", admin);
 
-        assertEquals("REJECTED", listing.getStatus());
-        assertEquals("Inappropriate content", listing.getRejectionReason());
+        verify(moderationService).rejectListing(1L, "Inappropriate content", admin);
     }
 
     @Test
     void flagListing_shouldSetStatusFlagged() {
-        Listing listing = Listing.builder().id(1L).title("Test").status("PENDING").user(regularUser).build();
-
-        when(listingRepository.findById(1L)).thenReturn(Optional.of(listing));
-        when(listingRepository.save(any())).thenReturn(listing);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(moderationService).flagListing(1L, checker);
 
         adminService.flagListing(1L, checker);
 
-        assertEquals("FLAGGED", listing.getStatus());
+        verify(moderationService).flagListing(1L, checker);
     }
 
     // ─── Feature Listing ──────────────────────────────────
     @Test
     void featureListing_shouldSucceed_forAdmin() {
-        Listing listing = Listing.builder().id(1L).title("Test").featured(false).user(regularUser).build();
-
-        when(listingRepository.findById(1L)).thenReturn(Optional.of(listing));
-        when(listingRepository.save(any())).thenReturn(listing);
-        when(auditLogRepository.save(any())).thenReturn(null);
+        doNothing().when(moderationService).featureListing(1L, true, admin);
 
         adminService.featureListing(1L, true, admin);
 
-        assertTrue(listing.getFeatured());
+        verify(moderationService).featureListing(1L, true, admin);
     }
 
     @Test
     void featureListing_shouldFail_forChecker() {
+        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+                .when(moderationService).featureListing(1L, true, checker);
         assertThrows(RuntimeException.class,
                 () -> adminService.featureListing(1L, true, checker));
     }

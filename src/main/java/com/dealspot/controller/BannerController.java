@@ -1,6 +1,6 @@
 package com.dealspot.controller;
 
-import com.dealspot.entity.Banner;
+import com.dealspot.dto.BannerResponse;
 import com.dealspot.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,9 @@ public class BannerController {
     private final AdminService adminService;
 
     @GetMapping("/active")
-    public ResponseEntity<List<Banner>> getActiveBanners() {
-        return ResponseEntity.ok(adminService.getActiveBanners());
+    public ResponseEntity<List<BannerResponse>> getActiveBanners() {
+        return ResponseEntity.ok(adminService.getActiveBanners().stream()
+                .map(BannerResponse::fromEntity)
+                .toList());
     }
 }

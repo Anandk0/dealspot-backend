@@ -1,6 +1,6 @@
 package com.dealspot.controller;
 
-import com.dealspot.entity.Notification;
+import com.dealspot.dto.NotificationResponse;
 import com.dealspot.entity.User;
 import com.dealspot.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +19,12 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public ResponseEntity<Page<Notification>> getNotifications(
+    public ResponseEntity<Page<NotificationResponse>> getNotifications(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(notificationService.getNotifications(user.getId(), page, size));
+        return ResponseEntity.ok(notificationService.getNotifications(user.getId(), page, size)
+                .map(NotificationResponse::fromEntity));
     }
 
     @GetMapping("/unread-count")

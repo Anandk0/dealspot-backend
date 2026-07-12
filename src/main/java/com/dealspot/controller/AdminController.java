@@ -1,13 +1,13 @@
 package com.dealspot.controller;
 
-import com.dealspot.dto.ListingResponse;
+import com.dealspot.dto.*;
 import com.dealspot.entity.*;
 import com.dealspot.repository.PaymentOrderRepository;
 import com.dealspot.service.AdminService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -106,13 +106,14 @@ public class AdminController {
 
     // ─── User Management ──────────────────────────────────
     @GetMapping("/users")
-    public ResponseEntity<Page<User>> users(
+    public ResponseEntity<Page<UserResponse>> users(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String search,
             @AuthenticationPrincipal User user) {
         adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
-        return ResponseEntity.ok(adminService.getAllUsers(page, size, search));
+        return ResponseEntity.ok(adminService.getAllUsers(page, size, search)
+                .map(UserResponse::fromEntity));
     }
 
     @PutMapping("/users/{userId}/ban")
@@ -143,16 +144,27 @@ public class AdminController {
 
     // ─── Banners ──────────────────────────────────────────
     @GetMapping("/banners")
-    public ResponseEntity<List<Banner>> banners(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<BannerResponse>> banners(@AuthenticationPrincipal User user) {
         adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
-        return ResponseEntity.ok(adminService.getAllBanners());
+        return ResponseEntity.ok(adminService.getAllBanners().stream()
+                .map(BannerResponse::fromEntity)
+                .toList());
     }
 
     @PostMapping("/banners")
-    public ResponseEntity<Banner> createBanner(
-            @RequestBody Banner banner,
+    public ResponseEntity<BannerResponse> createBanner(
+            @Valid @RequestBody CreateBannerRequest request,
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(adminService.createBanner(banner, user));
+        Banner banner = Banner.builder()
+                .title(request.getTitle())
+                .subtitle(request.getSubtitle())
+                .imageUrl(request.getImageUrl())
+                .link(request.getLink())
+                .color(request.getColor())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .build();
+        return ResponseEntity.ok(BannerResponse.fromEntity(adminService.createBanner(banner, user)));
     }
 
     @DeleteMapping("/banners/{id}")

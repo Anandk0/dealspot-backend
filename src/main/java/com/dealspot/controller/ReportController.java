@@ -1,14 +1,14 @@
 package com.dealspot.controller;
 
-import com.dealspot.entity.Report;
+import com.dealspot.dto.CreateReportRequest;
+import com.dealspot.dto.ReportResponse;
 import com.dealspot.entity.User;
 import com.dealspot.service.ReportService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -18,15 +18,15 @@ public class ReportController {
     private final ReportService reportService;
 
     @PostMapping
-    public ResponseEntity<Report> createReport(
-            @RequestBody Map<String, String> body,
+    public ResponseEntity<ReportResponse> createReport(
+            @Valid @RequestBody CreateReportRequest request,
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(reportService.createReport(
-                body.get("targetType"),
-                Long.parseLong(body.get("targetId")),
-                body.get("reason"),
-                body.get("description"),
-                user
-        ));
+        return ResponseEntity.ok(ReportResponse.fromEntity(
+                reportService.createReport(
+                        request.getTargetType(),
+                        request.getTargetId(),
+                        request.getReason(),
+                        request.getDescription(),
+                        user)));
     }
 }

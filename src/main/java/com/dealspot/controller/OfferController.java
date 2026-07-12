@@ -1,8 +1,10 @@
 package com.dealspot.controller;
 
-import com.dealspot.entity.Offer;
+import com.dealspot.dto.CreateOfferRequest;
+import com.dealspot.dto.OfferResponse;
 import com.dealspot.entity.User;
 import com.dealspot.service.OfferService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -19,44 +21,47 @@ public class OfferController {
     private final OfferService offerService;
 
     @PostMapping("/{listingId}")
-    public ResponseEntity<Offer> makeOffer(
+    public ResponseEntity<OfferResponse> makeOffer(
             @PathVariable Long listingId,
-            @RequestBody Map<String, Object> body,
+            @Valid @RequestBody CreateOfferRequest request,
             @AuthenticationPrincipal User user) {
-        Double amount = ((Number) body.get("amount")).doubleValue();
-        String message = (String) body.get("message");
-        return ResponseEntity.ok(offerService.makeOffer(listingId, amount, message, user));
+        return ResponseEntity.ok(OfferResponse.fromEntity(
+                offerService.makeOffer(listingId, request.getAmount(), request.getMessage(), user)));
     }
 
     @PutMapping("/{offerId}/respond")
-    public ResponseEntity<Offer> respondToOffer(
+    public ResponseEntity<OfferResponse> respondToOffer(
             @PathVariable Long offerId,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(offerService.respondToOffer(offerId, body.get("action"), user));
+        return ResponseEntity.ok(OfferResponse.fromEntity(
+                offerService.respondToOffer(offerId, body.get("action"), user)));
     }
 
     @GetMapping("/listing/{listingId}")
-    public ResponseEntity<Page<Offer>> getOffersForListing(
+    public ResponseEntity<Page<OfferResponse>> getOffersForListing(
             @PathVariable Long listingId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(offerService.getOffersForListing(listingId, page, size));
+        return ResponseEntity.ok(offerService.getOffersForListing(listingId, page, size)
+                .map(OfferResponse::fromEntity));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<Page<Offer>> getMyOffers(
+    public ResponseEntity<Page<OfferResponse>> getMyOffers(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(offerService.getMyOffers(user.getId(), page, size));
+        return ResponseEntity.ok(offerService.getMyOffers(user.getId(), page, size)
+                .map(OfferResponse::fromEntity));
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<Page<Offer>> getPendingOffers(
+    public ResponseEntity<Page<OfferResponse>> getPendingOffers(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(offerService.getPendingOffersForSeller(user.getId(), page, size));
+        return ResponseEntity.ok(offerService.getPendingOffersForSeller(user.getId(), page, size)
+                .map(OfferResponse::fromEntity));
     }
 }

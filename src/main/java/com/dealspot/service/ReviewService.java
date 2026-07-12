@@ -2,10 +2,11 @@ package com.dealspot.service;
 
 import com.dealspot.entity.*;
 import com.dealspot.repository.*;
+import com.dealspot.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
@@ -17,6 +18,7 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final ListingRepository listingRepository;
 
+    @Transactional
     public Review createReview(Long targetUserId, Long listingId, int rating, String comment, User reviewer) {
         if (reviewer.getId().equals(targetUserId)) {
             throw new RuntimeException("Cannot review yourself");
@@ -42,7 +44,7 @@ public class ReviewService {
     }
 
     public Page<Review> getReviewsForUser(Long userId, int page, int size) {
-        return reviewRepository.findByTargetUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size));
+        return reviewRepository.findByTargetUserIdOrderByCreatedAtDesc(userId, PaginationUtil.createPageable(page, size));
     }
 
     public Map<String, Object> getUserRatingSummary(Long userId) {
