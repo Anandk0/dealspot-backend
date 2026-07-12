@@ -33,4 +33,16 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     Page<Listing> searchInCategory(@Param("query") String query, @Param("category") String category, Pageable pageable);
 
     List<Listing> findTop10ByStatusOrderByCreatedAtDesc(String status);
+
+    // Location-based search (Haversine formula for distance in km)
+    @Query(value = "SELECT * FROM listings l WHERE l.status = 'ACTIVE' " +
+           "AND l.latitude IS NOT NULL AND l.longitude IS NOT NULL " +
+           "AND (6371 * acos(cos(radians(:lat)) * cos(radians(l.latitude)) * " +
+           "cos(radians(l.longitude) - radians(:lng)) + sin(radians(:lat)) * " +
+           "sin(radians(l.latitude)))) < :radiusKm " +
+           "ORDER BY (6371 * acos(cos(radians(:lat)) * cos(radians(l.latitude)) * " +
+           "cos(radians(l.longitude) - radians(:lng)) + sin(radians(:lat)) * " +
+           "sin(radians(l.latitude)))) ASC",
+           nativeQuery = true)
+    List<Listing> findNearby(@Param("lat") double lat, @Param("lng") double lng, @Param("radiusKm") double radiusKm);
 }

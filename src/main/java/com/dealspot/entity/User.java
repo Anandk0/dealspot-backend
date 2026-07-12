@@ -45,6 +45,14 @@ public class User {
     private String banReason;
     private LocalDateTime bannedAt;
 
+    private Double latitude;
+    private Double longitude;
+
+    @Builder.Default
+    private Boolean verified = false;
+
+    private LocalDateTime verifiedAt;
+
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

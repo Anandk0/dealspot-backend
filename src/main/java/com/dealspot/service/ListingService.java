@@ -28,7 +28,7 @@ public class ListingService {
         if (images != null) {
             for (MultipartFile image : images) {
                 if (!image.isEmpty()) {
-                    imageUrls.add(cloudinaryService.uploadImage(image));
+                    imageUrls.add(cloudinaryService.uploadImageUrl(image));
                 }
             }
         }
@@ -109,7 +109,7 @@ public class ListingService {
             List<String> imageUrls = new ArrayList<>(listing.getImages() != null ? listing.getImages() : new ArrayList<>());
             for (MultipartFile image : newImages) {
                 if (!image.isEmpty()) {
-                    imageUrls.add(cloudinaryService.uploadImage(image));
+                    imageUrls.add(cloudinaryService.uploadImageUrl(image));
                 }
             }
             listing.setImages(imageUrls);
@@ -129,10 +129,27 @@ public class ListingService {
 
         // Delete images from Cloudinary
         if (listing.getImages() != null) {
-            listing.getImages().forEach(cloudinaryService::deleteImage);
+            listing.getImages().forEach(url -> {
+                // Extract public ID from URL and delete
+                String publicId = extractPublicId(url);
+                if (publicId != null) {
+                    cloudinaryService.deleteByPublicId(publicId);
+                }
+            });
         }
 
         listingRepository.delete(listing);
+    }
+
+    private String extractPublicId(String url) {
+        try {
+            String[] parts = url.split("/upload/");
+            if (parts.length > 1) {
+                String path = parts[1].replaceFirst("v\\d+/", "");
+                return path.substring(0, path.lastIndexOf('.'));
+            }
+        } catch (Exception e) { /* ignore */ }
+        return null;
     }
 
     public Page<ListingResponse> search(String query, String category, int page, int size) {
@@ -147,6 +164,11 @@ public class ListingService {
 
     public List<ListingResponse> getRecentListings() {
         return listingRepository.findTop10ByStatusOrderByCreatedAtDesc("ACTIVE")
+                .stream().map(ListingResponse::fromEntity).toList();
+    }
+
+    public List<ListingResponse> getNearbyListings(double lat, double lng, double radiusKm) {
+        return listingRepository.findNearby(lat, lng, radiusKm)
                 .stream().map(ListingResponse::fromEntity).toList();
     }
 }

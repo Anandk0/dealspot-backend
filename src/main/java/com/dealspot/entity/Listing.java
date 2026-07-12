@@ -80,6 +80,15 @@ public class Listing {
 
     private LocalDateTime moderatedAt;
 
+    private Double latitude;
+    private Double longitude;
+    private LocalDateTime expiresAt;
+
+    @Builder.Default
+    private Boolean promoted = false;
+
+    private LocalDateTime promotedUntil;
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
