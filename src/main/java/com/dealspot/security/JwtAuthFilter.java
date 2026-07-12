@@ -38,6 +38,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 User user = userRepository.findByPhone(phone).orElse(null);
 
                 if (user != null) {
+                    if (user.getBanned() != null && user.getBanned()) {
+                        response.setStatus(403);
+                        response.getWriter().write("{\"error\":\"Account banned: " +
+                            (user.getBanReason() != null ? user.getBanReason() : "Contact support") + "\"}");
+                        return;
+                    }
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
                     var auth = new UsernamePasswordAuthenticationToken(user, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(auth);

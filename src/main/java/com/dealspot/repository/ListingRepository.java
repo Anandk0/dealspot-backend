@@ -18,6 +18,8 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
 
     Page<Listing> findByStatus(String status, Pageable pageable);
 
+    long countByStatus(String status);
+
     @Query("SELECT l FROM Listing l WHERE l.status = 'ACTIVE' AND " +
            "(LOWER(l.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(l.titleEn) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

@@ -38,6 +38,13 @@ public class User {
     @Builder.Default
     private String role = "USER";
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean banned = false;
+
+    private String banReason;
+    private LocalDateTime bannedAt;
+
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

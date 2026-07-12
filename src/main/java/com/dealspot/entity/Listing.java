@@ -69,6 +69,17 @@ public class Listing {
     @Builder.Default
     private Integer viewCount = 0;
 
+    @Builder.Default
+    private Boolean featured = false;
+
+    private String rejectionReason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "moderated_by")
+    private User moderatedBy;
+
+    private LocalDateTime moderatedAt;
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
