@@ -5,6 +5,7 @@ import com.dealspot.dto.AuthResponse;
 import com.dealspot.dto.RegisterRequest;
 import com.dealspot.entity.RefreshToken;
 import com.dealspot.entity.User;
+import com.dealspot.exception.AccountBannedException;
 import com.dealspot.repository.RefreshTokenRepository;
 import com.dealspot.repository.UserRepository;
 import com.dealspot.security.JwtUtil;
@@ -61,6 +62,11 @@ public class AuthService {
 
         User user = userRepository.findByPhone(request.getPhone())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if user is banned — reject regardless of credentials
+        if (Boolean.TRUE.equals(user.getBanned())) {
+            throw new AccountBannedException(user.getBanReason());
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid password");

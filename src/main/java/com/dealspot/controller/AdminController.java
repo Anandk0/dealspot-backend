@@ -2,12 +2,10 @@ package com.dealspot.controller;
 
 import com.dealspot.dto.*;
 import com.dealspot.entity.*;
-import com.dealspot.repository.PaymentOrderRepository;
 import com.dealspot.service.AdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +21,6 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
-    private final PaymentOrderRepository paymentOrderRepository;
 
     // ─── Dashboard ────────────────────────────────────────
     @GetMapping("/stats/dashboard")
@@ -45,10 +42,37 @@ public class AdminController {
     public ResponseEntity<Page<PaymentOrder>> transactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @AuthenticationPrincipal User user) {
         adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
-        return ResponseEntity.ok(paymentOrderRepository.findAllByOrderByCreatedAtDesc(
-                PageRequest.of(page, size)));
+        return ResponseEntity.ok(adminService.getTransactionHistory(page, size, from, to));
+    }
+
+    @GetMapping("/stats/revenue/export")
+    public ResponseEntity<byte[]> exportRevenue(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        String csv = adminService.exportRevenueCsv(from, to);
+        byte[] csvBytes = csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv; charset=UTF-8")
+                .header("Content-Disposition", "attachment; filename=\"revenue_export.csv\"")
+                .body(csvBytes);
+    }
+
+    @GetMapping("/stats/users")
+    public ResponseEntity<Map<String, Object>> userGrowthStats(@AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        return ResponseEntity.ok(adminService.getUserGrowthStats());
+    }
+
+    @GetMapping("/stats/listings")
+    public ResponseEntity<Map<String, Object>> listingStats(@AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        return ResponseEntity.ok(adminService.getListingStats());
     }
 
     // ─── Moderation ───────────────────────────────────────
@@ -61,6 +85,12 @@ public class AdminController {
         Page<ListingResponse> listings = adminService.getModerationQueue(page, size)
                 .map(ListingResponse::fromEntity);
         return ResponseEntity.ok(listings);
+    }
+
+    @GetMapping("/moderation/stats")
+    public ResponseEntity<Map<String, Object>> moderationStats(@AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
+        return ResponseEntity.ok(adminService.getModerationStats());
     }
 
     @PutMapping("/moderation/{listingId}/approve")
@@ -167,6 +197,25 @@ public class AdminController {
         return ResponseEntity.ok(BannerResponse.fromEntity(adminService.createBanner(banner, user)));
     }
 
+    @PutMapping("/banners/{id}")
+    public ResponseEntity<BannerResponse> updateBanner(
+            @PathVariable Long id,
+            @RequestBody UpdateBannerRequest request,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        Banner updatedFields = Banner.builder()
+                .title(request.getTitle())
+                .subtitle(request.getSubtitle())
+                .imageUrl(request.getImageUrl())
+                .link(request.getLink())
+                .color(request.getColor())
+                .active(request.getActive())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .build();
+        return ResponseEntity.ok(BannerResponse.fromEntity(adminService.updateBanner(id, updatedFields, user)));
+    }
+
     @DeleteMapping("/banners/{id}")
     public ResponseEntity<Map<String, String>> deleteBanner(
             @PathVariable Long id,
@@ -186,8 +235,24 @@ public class AdminController {
     public ResponseEntity<Map<String, String>> updateSettings(
             @RequestBody Map<String, String> settings,
             @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "SUPER_ADMIN");
         settings.forEach((key, value) -> adminService.updateSetting(key, value, user));
         return ResponseEntity.ok(Map.of("message", "Settings updated"));
+    }
+
+    // ─── Platform Listings ────────────────────────────────
+    @PostMapping("/listings/platform")
+    public ResponseEntity<ListingResponse> createPlatformListing(
+            @Valid @RequestBody CreatePlatformListingRequest request,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        return ResponseEntity.ok(ListingResponse.fromEntity(
+                adminService.createPlatformListing(
+                        request.getTitle(),
+                        request.getDescription(),
+                        request.getCategory(),
+                        request.getPrice(),
+                        user)));
     }
 
     // ─── Audit Logs ───────────────────────────────────────
@@ -195,8 +260,11 @@ public class AdminController {
     public ResponseEntity<Page<AuditLog>> auditLogs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @AuthenticationPrincipal User user) {
         adminService.checkRole(user, "SUPER_ADMIN");
-        return ResponseEntity.ok(adminService.getAuditLogs(page, size));
+        return ResponseEntity.ok(adminService.getAuditLogs(page, size, action, from, to));
     }
 }

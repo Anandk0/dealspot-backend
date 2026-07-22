@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.lang.Nullable;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +64,10 @@ public class AdminService {
         moderationService.featureListing(listingId, featured, actor);
     }
 
+    public Map<String, Object> getModerationStats() {
+        return moderationService.getModerationStats();
+    }
+
     // ─── Dashboard Stats ──────────────────────────────────
     public Map<String, Object> getDashboardStats() {
         return statsService.getDashboardStats();
@@ -70,6 +75,23 @@ public class AdminService {
 
     public Map<String, Object> getRevenueStats(LocalDate from, LocalDate to) {
         return statsService.getRevenueStats(from, to);
+    }
+
+    public org.springframework.data.domain.Page<com.dealspot.entity.PaymentOrder> getTransactionHistory(
+            int page, int size, LocalDate from, LocalDate to) {
+        return statsService.getTransactionHistory(page, size, from, to);
+    }
+
+    public String exportRevenueCsv(LocalDate from, LocalDate to) {
+        return statsService.exportRevenueCsv(from, to);
+    }
+
+    public Map<String, Object> getUserGrowthStats() {
+        return statsService.getUserGrowthStats();
+    }
+
+    public Map<String, Object> getListingStats() {
+        return statsService.getListingStats();
     }
 
     // ─── Banners ──────────────────────────────────────────
@@ -85,6 +107,10 @@ public class AdminService {
         return bannerService.createBanner(banner, actor);
     }
 
+    public Banner updateBanner(Long bannerId, Banner updatedFields, User actor) {
+        return bannerService.updateBanner(bannerId, updatedFields, actor);
+    }
+
     public void deleteBanner(Long bannerId, User actor) {
         bannerService.deleteBanner(bannerId, actor);
     }
@@ -98,7 +124,17 @@ public class AdminService {
         settingsService.updateSetting(key, value, actor);
     }
 
+    public Listing createPlatformListing(String title, String description, String category,
+                                         Double price, User admin) {
+        return settingsService.createPlatformListing(title, description, category, price, admin);
+    }
+
     // ─── Audit ────────────────────────────────────────────
+    public Page<AuditLog> getAuditLogs(int page, int size, @Nullable String action,
+                                        @Nullable LocalDate from, @Nullable LocalDate to) {
+        return auditService.getAuditLogs(page, size, action, from, to);
+    }
+
     public Page<AuditLog> getAuditLogs(int page, int size) {
         return auditService.getAuditLogs(page, size);
     }

@@ -17,6 +17,7 @@ public class UserResponse {
     private String location;
     private String district;
     private String profileImage;
+    private String role;
     private LocalDateTime createdAt;
 
     public static UserResponse fromEntity(User user) {
@@ -28,6 +29,7 @@ public class UserResponse {
                 .location(user.getLocation())
                 .district(user.getDistrict())
                 .profileImage(user.getProfileImage())
+                .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

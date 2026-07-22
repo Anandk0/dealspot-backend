@@ -78,4 +78,4 @@ email-otp:
 # CORS
 app:
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,https://dealspot-8w5z.onrender.com}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,https://dealspot-8w5z.onrender.com,https://6pl77msv-3000.inc1.devtunnels.ms}

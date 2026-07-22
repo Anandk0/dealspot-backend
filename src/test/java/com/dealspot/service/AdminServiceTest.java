@@ -1,19 +1,15 @@
 package com.dealspot.service;
 
-import com.dealspot.entity.Listing;
 import com.dealspot.entity.User;
-import com.dealspot.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
+import org.springframework.security.access.AccessDeniedException;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,20 +52,20 @@ class AdminServiceTest {
 
     @Test
     void checkRole_shouldFail_forRegularUser() {
-        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(userManagementService).checkRole(regularUser, "ADMIN", "SUPER_ADMIN");
-        RuntimeException ex = assertThrows(RuntimeException.class,
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> adminService.checkRole(regularUser, "ADMIN", "SUPER_ADMIN"));
-        assertTrue(ex.getMessage().contains("Access denied"));
+        assertTrue(ex.getMessage().contains("Insufficient permissions"));
     }
 
     @Test
     void checkRole_shouldFail_forChecker_whenOnlyAdminAllowed() {
-        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(userManagementService).checkRole(checker, "ADMIN", "SUPER_ADMIN");
-        RuntimeException ex = assertThrows(RuntimeException.class,
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> adminService.checkRole(checker, "ADMIN", "SUPER_ADMIN"));
-        assertTrue(ex.getMessage().contains("Access denied"));
+        assertTrue(ex.getMessage().contains("Insufficient permissions"));
     }
 
     // ─── Role Change ──────────────────────────────────────
@@ -84,17 +80,17 @@ class AdminServiceTest {
 
     @Test
     void changeUserRole_shouldFail_whenActorIsAdmin() {
-        doThrow(new RuntimeException("Access denied. Required role: SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(userManagementService).changeUserRole(4L, "CHECKER", admin);
-        assertThrows(RuntimeException.class,
+        assertThrows(AccessDeniedException.class,
                 () -> adminService.changeUserRole(4L, "CHECKER", admin));
     }
 
     @Test
     void changeUserRole_shouldFail_whenActorIsUser() {
-        doThrow(new RuntimeException("Access denied. Required role: SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(userManagementService).changeUserRole(4L, "ADMIN", regularUser);
-        assertThrows(RuntimeException.class,
+        assertThrows(AccessDeniedException.class,
                 () -> adminService.changeUserRole(4L, "ADMIN", regularUser));
     }
 
@@ -110,17 +106,17 @@ class AdminServiceTest {
 
     @Test
     void banUser_shouldFail_forChecker() {
-        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(userManagementService).banUser(4L, "Spam", checker);
-        assertThrows(RuntimeException.class,
+        assertThrows(AccessDeniedException.class,
                 () -> adminService.banUser(4L, "Spam", checker));
     }
 
     @Test
     void banUser_shouldFail_forRegularUser() {
-        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(userManagementService).banUser(4L, "Spam", regularUser);
-        assertThrows(RuntimeException.class,
+        assertThrows(AccessDeniedException.class,
                 () -> adminService.banUser(4L, "Spam", regularUser));
     }
 
@@ -146,9 +142,9 @@ class AdminServiceTest {
 
     @Test
     void approveListing_shouldFail_forRegularUser() {
-        doThrow(new RuntimeException("Access denied"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(moderationService).approveListing(1L, regularUser);
-        assertThrows(RuntimeException.class,
+        assertThrows(AccessDeniedException.class,
                 () -> adminService.approveListing(1L, regularUser));
     }
 
@@ -182,9 +178,9 @@ class AdminServiceTest {
 
     @Test
     void featureListing_shouldFail_forChecker() {
-        doThrow(new RuntimeException("Access denied. Required role: ADMIN or SUPER_ADMIN"))
+        doThrow(new AccessDeniedException("Insufficient permissions"))
                 .when(moderationService).featureListing(1L, true, checker);
-        assertThrows(RuntimeException.class,
+        assertThrows(AccessDeniedException.class,
                 () -> adminService.featureListing(1L, true, checker));
     }
 }

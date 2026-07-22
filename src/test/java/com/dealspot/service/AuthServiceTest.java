@@ -5,6 +5,7 @@ import com.dealspot.dto.AuthResponse;
 import com.dealspot.dto.RegisterRequest;
 import com.dealspot.entity.RefreshToken;
 import com.dealspot.entity.User;
+import com.dealspot.exception.AccountBannedException;
 import com.dealspot.repository.RefreshTokenRepository;
 import com.dealspot.repository.UserRepository;
 import com.dealspot.security.JwtUtil;
@@ -219,5 +220,58 @@ class AuthServiceTest {
         authService.logout(1L);
 
         verify(refreshTokenRepository).revokeAllByUserId(1L);
+    }
+
+    @Test
+    void login_shouldFail_whenUserIsBanned() {
+        User bannedUser = User.builder()
+                .id(2L)
+                .phone("9876543211")
+                .name("Banned User")
+                .password("encoded_password")
+                .role("USER")
+                .banned(true)
+                .banReason("Spamming listings")
+                .build();
+
+        AuthRequest request = new AuthRequest();
+        request.setPhone("9876543211");
+        request.setPassword("password123");
+
+        when(recaptchaService.verify(any())).thenReturn(true);
+        when(userRepository.findByPhone("9876543211")).thenReturn(Optional.of(bannedUser));
+
+        AccountBannedException exception = assertThrows(AccountBannedException.class,
+                () -> authService.login(request));
+
+        assertEquals("Account is banned: Spamming listings", exception.getMessage());
+        assertEquals("Spamming listings", exception.getBanReason());
+        // Password should NOT be checked for banned users
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void login_shouldFail_whenUserIsBanned_withNullReason() {
+        User bannedUser = User.builder()
+                .id(3L)
+                .phone("9876543212")
+                .name("Banned User No Reason")
+                .password("encoded_password")
+                .role("USER")
+                .banned(true)
+                .banReason(null)
+                .build();
+
+        AuthRequest request = new AuthRequest();
+        request.setPhone("9876543212");
+        request.setPassword("password123");
+
+        when(recaptchaService.verify(any())).thenReturn(true);
+        when(userRepository.findByPhone("9876543212")).thenReturn(Optional.of(bannedUser));
+
+        AccountBannedException exception = assertThrows(AccountBannedException.class,
+                () -> authService.login(request));
+
+        assertEquals("Account is banned: No reason provided", exception.getMessage());
     }
 }

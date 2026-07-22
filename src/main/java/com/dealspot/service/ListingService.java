@@ -54,6 +54,7 @@ public class ListingService {
                 .vehicleType(request.getVehicleType())
                 .rateInfo(request.getRateInfo())
                 .images(imageUrls)
+                .status("PENDING")
                 .user(user)
                 .build();
 

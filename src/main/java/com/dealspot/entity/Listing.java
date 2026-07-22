@@ -54,7 +54,7 @@ public class Listing {
 
     @Column(nullable = false)
     @Builder.Default
-    private String status = "ACTIVE"; // ACTIVE, PENDING, SOLD, EXPIRED
+    private String status = "PENDING"; // PENDING, ACTIVE, REJECTED, FLAGGED, SOLD, EXPIRED
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

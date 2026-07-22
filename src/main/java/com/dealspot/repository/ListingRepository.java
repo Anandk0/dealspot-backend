@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ListingRepository extends JpaRepository<Listing, Long> {
@@ -45,4 +46,15 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
            "sin(radians(l.latitude)))) ASC",
            nativeQuery = true)
     List<Listing> findNearby(@Param("lat") double lat, @Param("lng") double lng, @Param("radiusKm") double radiusKm);
+
+    // Moderation stats queries
+    long countByStatusAndModeratedAtGreaterThanEqual(String status, LocalDateTime since);
+
+    // Analytics: count listings grouped by category
+    @Query("SELECT l.category, COUNT(l) FROM Listing l GROUP BY l.category ORDER BY COUNT(l) DESC")
+    List<Object[]> countGroupByCategory();
+
+    // Analytics: count listings grouped by status
+    @Query("SELECT l.status, COUNT(l) FROM Listing l GROUP BY l.status")
+    List<Object[]> countGroupByStatus();
 }
