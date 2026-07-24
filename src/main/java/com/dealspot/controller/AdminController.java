@@ -3,6 +3,7 @@ package com.dealspot.controller;
 import com.dealspot.dto.*;
 import com.dealspot.entity.*;
 import com.dealspot.service.AdminService;
+import com.dealspot.service.CloudinaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final CloudinaryService cloudinaryService;
 
     // ─── Dashboard ────────────────────────────────────────
     @GetMapping("/stats/dashboard")
@@ -193,6 +195,40 @@ public class AdminController {
                 .color(request.getColor())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .build();
+        return ResponseEntity.ok(BannerResponse.fromEntity(adminService.createBanner(banner, user)));
+    }
+
+    @PostMapping("/banners/upload")
+    public ResponseEntity<BannerResponse> createBannerWithImage(
+            @RequestParam("title") String title,
+            @RequestParam(value = "subtitle", required = false) String subtitle,
+            @RequestParam(value = "link", required = false) String link,
+            @RequestParam(value = "color", required = false) String color,
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate,
+            @RequestParam(value = "image", required = false) org.springframework.web.multipart.MultipartFile image,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+
+        String imageUrl = null;
+        if (image != null && !image.isEmpty()) {
+            imageUrl = cloudinaryService.uploadImageUrl(image);
+        }
+
+        java.time.LocalDateTime startDateTime = (startDate != null && !startDate.isBlank())
+                ? java.time.LocalDate.parse(startDate).atStartOfDay() : null;
+        java.time.LocalDateTime endDateTime = (endDate != null && !endDate.isBlank())
+                ? java.time.LocalDate.parse(endDate).atTime(23, 59, 59) : null;
+
+        Banner banner = Banner.builder()
+                .title(title)
+                .subtitle(subtitle)
+                .imageUrl(imageUrl)
+                .link(link)
+                .color(color)
+                .startDate(startDateTime)
+                .endDate(endDateTime)
                 .build();
         return ResponseEntity.ok(BannerResponse.fromEntity(adminService.createBanner(banner, user)));
     }
