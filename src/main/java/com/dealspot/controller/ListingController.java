@@ -74,11 +74,5 @@ public class ListingController {
         return ResponseEntity.ok(listingService.getRecentListings());
     }
 
-    @GetMapping("/nearby")
-    public ResponseEntity<List<ListingResponse>> getNearbyListings(
-            @RequestParam double lat,
-            @RequestParam double lng,
-            @RequestParam(defaultValue = "50") double radius) {
-        return ResponseEntity.ok(listingService.getNearbyListings(lat, lng, radius));
-    }
+    // Nearby listings now handled by SearchController (district-based, not GPS)
 }

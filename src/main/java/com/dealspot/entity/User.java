@@ -45,6 +45,9 @@ public class User {
     private String banReason;
     private LocalDateTime bannedAt;
 
+    @Column(name = "preferred_district")
+    private String preferredDistrict;
+
     private Double latitude;
     private Double longitude;
 

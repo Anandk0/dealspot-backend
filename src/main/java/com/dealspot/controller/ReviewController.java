@@ -6,11 +6,11 @@ import com.dealspot.entity.User;
 import com.dealspot.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -25,25 +25,35 @@ public class ReviewController {
             @Valid @RequestBody CreateReviewRequest request,
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ReviewResponse.fromEntity(
-                reviewService.createReview(
-                        request.getTargetUserId(),
-                        request.getListingId(),
+                reviewService.submitReview(
+                        user.getId(),
+                        request.getSellerId(),
                         request.getRating(),
-                        request.getComment(),
-                        user)));
+                        request.getComment())));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<ReviewResponse>> getUserReviews(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(reviewService.getReviewsForUser(userId, page, size)
-                .map(ReviewResponse::fromEntity));
+    @GetMapping("/seller/{sellerId}")
+    public ResponseEntity<List<ReviewResponse>> getSellerReviews(@PathVariable Long sellerId) {
+        return ResponseEntity.ok(reviewService.getSellerReviews(sellerId)
+                .stream()
+                .map(ReviewResponse::fromEntity)
+                .toList());
     }
 
-    @GetMapping("/user/{userId}/summary")
-    public ResponseEntity<Map<String, Object>> getUserRatingSummary(@PathVariable Long userId) {
-        return ResponseEntity.ok(reviewService.getUserRatingSummary(userId));
+    @GetMapping("/my")
+    public ResponseEntity<List<ReviewResponse>> getMyReviews(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(reviewService.getMyReviews(user.getId())
+                .stream()
+                .map(ReviewResponse::fromEntity)
+                .toList());
+    }
+
+    @GetMapping("/seller/{sellerId}/summary")
+    public ResponseEntity<Map<String, Object>> getSellerRatingSummary(@PathVariable Long sellerId) {
+        Double avg = reviewService.getSellerAverageRating(sellerId);
+        List<?> reviews = reviewService.getSellerReviews(sellerId);
+        return ResponseEntity.ok(Map.of(
+                "averageRating", avg,
+                "totalReviews", reviews.size()));
     }
 }

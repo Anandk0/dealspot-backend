@@ -4,12 +4,14 @@ import com.dealspot.entity.Listing;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface ListingRepository extends JpaRepository<Listing, Long> {
+public interface ListingRepository extends JpaRepository<Listing, Long>, JpaSpecificationExecutor<Listing> {
 
     Page<Listing> findByCategoryAndStatus(String category, String status, Pageable pageable);
 
@@ -57,4 +59,34 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     // Analytics: count listings grouped by status
     @Query("SELECT l.status, COUNT(l) FROM Listing l GROUP BY l.status")
     List<Object[]> countGroupByStatus();
+
+    // Category management: count listings by category slug
+    long countByCategory(String category);
+
+    // Category management: update category slug on all listings referencing old slug
+    @Modifying
+    @Query("UPDATE Listing l SET l.category = :newSlug WHERE l.category = :oldSlug")
+    int updateCategorySlug(@Param("oldSlug") String oldSlug, @Param("newSlug") String newSlug);
+
+    // Nearby listings by district
+    Page<Listing> findByDistrictAndStatus(String district, String status, Pageable pageable);
+
+    // Featured listings
+    Page<Listing> findByFeaturedTrueAndStatus(String status, Pageable pageable);
+
+    // Trending listings (created within a time window, sorted by viewCount)
+    @Query("SELECT l FROM Listing l WHERE l.status = 'ACTIVE' AND l.createdAt >= :since ORDER BY l.viewCount DESC")
+    Page<Listing> findTrendingListings(@Param("since") LocalDateTime since, Pageable pageable);
+
+    // Similar listings (same category and district, excluding the source listing)
+    @Query("SELECT l FROM Listing l WHERE l.status = 'ACTIVE' AND l.category = :category AND l.district = :district AND l.id <> :excludeId")
+    List<Listing> findSimilarListings(@Param("category") String category, @Param("district") String district, @Param("excludeId") Long excludeId, Pageable pageable);
+
+    // Search with district prioritization (buyer's district first, then others)
+    @Query("SELECT l FROM Listing l WHERE l.status = 'ACTIVE' AND " +
+           "(LOWER(l.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(l.titleEn) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(l.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY CASE WHEN l.district = :buyerDistrict THEN 0 ELSE 1 END, l.createdAt DESC")
+    Page<Listing> searchWithDistrictPriority(@Param("query") String query, @Param("buyerDistrict") String buyerDistrict, Pageable pageable);
 }

@@ -2,7 +2,9 @@ package com.dealspot.service;
 
 import com.dealspot.dto.ListingRequest;
 import com.dealspot.dto.ListingResponse;
+import com.dealspot.entity.Category;
 import com.dealspot.entity.Listing;
+import com.dealspot.entity.ModerationLevel;
 import com.dealspot.entity.User;
 import com.dealspot.repository.ListingRepository;
 import com.dealspot.util.PaginationUtil;
@@ -23,6 +25,7 @@ public class ListingService {
 
     private final ListingRepository listingRepository;
     private final CloudinaryService cloudinaryService;
+    private final CategoryService categoryService;
 
     @Transactional
     public ListingResponse createListing(ListingRequest request, List<MultipartFile> images, User user) {
@@ -33,6 +36,17 @@ public class ListingService {
                     imageUrls.add(cloudinaryService.uploadImageUrl(image));
                 }
             }
+        }
+
+        // Determine initial status based on category moderation level
+        String initialStatus = "PENDING";
+        try {
+            Category category = categoryService.getCategoryBySlug(request.getCategory());
+            if (category.getModerationLevel() == ModerationLevel.NO_AUTH) {
+                initialStatus = "ACTIVE";
+            }
+        } catch (Exception e) {
+            // Category not found in DB, default to PENDING
         }
 
         Listing listing = Listing.builder()
@@ -54,7 +68,7 @@ public class ListingService {
                 .vehicleType(request.getVehicleType())
                 .rateInfo(request.getRateInfo())
                 .images(imageUrls)
-                .status("PENDING")
+                .status(initialStatus)
                 .user(user)
                 .build();
 

@@ -51,7 +51,8 @@ class SettingsServiceTest {
         assertTrue(SettingsService.VALID_SETTINGS.contains("max_images_per_listing"));
         assertTrue(SettingsService.VALID_SETTINGS.contains("listing_expiry_days"));
         assertTrue(SettingsService.VALID_SETTINGS.contains("maintenance_mode"));
-        assertEquals(4, SettingsService.VALID_SETTINGS.size());
+        assertTrue(SettingsService.VALID_SETTINGS.contains("auto_approve_listings"));
+        assertEquals(5, SettingsService.VALID_SETTINGS.size());
     }
 
     // ─── updateSetting: unknown key validation ────────────

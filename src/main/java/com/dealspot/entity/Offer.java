@@ -2,6 +2,7 @@ package com.dealspot.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -28,17 +29,27 @@ public class Offer {
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
-    @Column(nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal amount;
 
     private String message;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, ACCEPTED, REJECTED, WITHDRAWN
+    private OfferStatus status = OfferStatus.PENDING;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal counterAmount;
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    private LocalDateTime respondedAt;
+    private LocalDateTime updatedAt;
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

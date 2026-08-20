@@ -25,7 +25,8 @@ public class SettingsService {
             "contact_unlock_price",
             "max_images_per_listing",
             "listing_expiry_days",
-            "maintenance_mode"
+            "maintenance_mode",
+            "auto_approve_listings"
     );
 
     public Map<String, String> getAllSettings() {
@@ -126,6 +127,12 @@ public class SettingsService {
                 if (!"true".equals(value) && !"false".equals(value)) {
                     throw new IllegalArgumentException(
                             "maintenance_mode must be 'true' or 'false'");
+                }
+            }
+            case "auto_approve_listings" -> {
+                if (!"true".equals(value) && !"false".equals(value)) {
+                    throw new IllegalArgumentException(
+                            "auto_approve_listings must be 'true' or 'false'");
                 }
             }
         }

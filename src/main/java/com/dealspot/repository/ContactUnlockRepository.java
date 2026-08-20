@@ -7,4 +7,5 @@ import java.util.Optional;
 public interface ContactUnlockRepository extends JpaRepository<ContactUnlock, Long> {
     boolean existsByBuyerIdAndListingId(Long buyerId, Long listingId);
     Optional<ContactUnlock> findByBuyerIdAndListingId(Long buyerId, Long listingId);
+    boolean existsByBuyerIdAndSellerId(Long buyerId, Long sellerId);
 }

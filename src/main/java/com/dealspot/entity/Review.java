@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reviews", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"reviewer_id", "listing_id"})
+    @UniqueConstraint(columnNames = {"buyer_id", "seller_id"})
 })
 @Data
 @NoArgsConstructor
@@ -19,20 +19,17 @@ public class Review {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewer_id", nullable = false)
-    private User reviewer;
+    @JoinColumn(name = "buyer_id", nullable = false)
+    private User buyer;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_user_id", nullable = false)
-    private User targetUser;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id")
-    private Listing listing;
+    @JoinColumn(name = "seller_id", nullable = false)
+    private User seller;
 
     @Column(nullable = false)
-    private Integer rating; // 1-5
+    private Short rating; // 1-5
 
+    @Column(columnDefinition = "TEXT")
     private String comment;
 
     @Column(nullable = false, updatable = false)
