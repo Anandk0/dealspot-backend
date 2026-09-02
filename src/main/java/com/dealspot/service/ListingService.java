@@ -78,8 +78,40 @@ public class ListingService {
 
     public Page<ListingResponse> getListingsByCategory(String category, int page, int size) {
         Pageable pageable = PaginationUtil.createPageable(page, size, Sort.by("createdAt").descending());
-        return listingRepository.findByCategoryAndStatus(category, "ACTIVE", pageable)
+
+        // Resolve category slug to include subcategory slugs if this is a parent category
+        List<String> slugs = resolveCategorySlugs(category);
+
+        if (slugs.size() == 1) {
+            // Single slug — use the efficient derived query
+            return listingRepository.findByCategoryAndStatus(slugs.get(0), "ACTIVE", pageable)
+                    .map(ListingResponse::fromEntity);
+        }
+        // Parent with subcategories — use IN query
+        return listingRepository.findByCategoryInAndStatus(slugs, "ACTIVE", pageable)
                 .map(ListingResponse::fromEntity);
+    }
+
+    /**
+     * Given a category slug, returns a list of slugs to query.
+     * If the slug belongs to a parent category that has active children,
+     * returns the parent slug PLUS all active child slugs.
+     * If it's a leaf category (or not found), returns just the original slug.
+     */
+    private List<String> resolveCategorySlugs(String slug) {
+        try {
+            Category category = categoryService.getCategoryBySlug(slug);
+            List<Category> children = categoryService.getActiveChildrenOf(category.getId());
+            if (children.isEmpty()) {
+                return List.of(slug);
+            }
+            List<String> slugs = new ArrayList<>();
+            slugs.add(slug); // include parent slug too (listings posted directly to parent)
+            children.forEach(c -> slugs.add(c.getSlug()));
+            return slugs;
+        } catch (Exception e) {
+            return List.of(slug);
+        }
     }
 
     public ListingResponse getListingById(Long id) {

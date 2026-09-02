@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Collections;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,6 +21,9 @@ public class CategoryPublicResponse {
     private String icon;
     private String imageUrl;
     private String color;
+    private Long parentId;                          // null = top-level
+    @Builder.Default
+    private List<CategoryPublicResponse> subcategories = Collections.emptyList();
 
     public static CategoryPublicResponse fromEntity(Category category) {
         return CategoryPublicResponse.builder()
@@ -28,6 +34,8 @@ public class CategoryPublicResponse {
                 .icon(category.getIcon())
                 .imageUrl(category.getImageUrl())
                 .color(category.getColor())
+                .parentId(category.getParent() != null ? category.getParent().getId() : null)
+                .subcategories(Collections.emptyList())
                 .build();
     }
 }

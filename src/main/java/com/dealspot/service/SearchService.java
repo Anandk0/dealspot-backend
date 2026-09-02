@@ -1,6 +1,7 @@
 package com.dealspot.service;
 
 import com.dealspot.dto.ListingResponse;
+import com.dealspot.entity.Category;
 import com.dealspot.entity.Listing;
 import com.dealspot.repository.ListingRepository;
 import com.dealspot.util.PaginationUtil;
@@ -26,27 +27,29 @@ import java.util.List;
 public class SearchService {
 
     private final ListingRepository listingRepository;
+    private final CategoryService categoryService;
 
     /**
      * Advanced search with filters, sort, and buyer district prioritization.
-     * Applies AND logic for all filters. When no explicit district filter is set
-     * but a buyerDistrict is provided, results are ordered with local listings first.
+     * When a parent category slug is given, automatically includes all subcategory slugs.
      */
     public Page<ListingResponse> search(String query, String category, String district,
                                          Double priceMin, Double priceMax, String sort,
                                          String buyerDistrict, int page, int size) {
 
-        Specification<Listing> spec = buildSearchSpecification(query, category, district, priceMin, priceMax, buyerDistrict);
+        // Expand category slug to include subcategory slugs if applicable
+        List<String> categorySlugs = resolveCategorySlugs(category);
+
+        Specification<Listing> spec = buildSearchSpecification(query, categorySlugs, district, priceMin, priceMax, buyerDistrict);
 
         Pageable pageable;
-        boolean hasBuyerDistrictPriority = (district == null || district.isBlank()) && buyerDistrict != null && !buyerDistrict.isBlank();
+        boolean hasBuyerDistrictPriority = (district == null || district.isBlank())
+                && buyerDistrict != null && !buyerDistrict.isBlank();
 
         if (hasBuyerDistrictPriority) {
-            // When buyer has a district but no explicit district filter,
-            // we use a custom specification with district priority ordering
             pageable = PaginationUtil.createPageable(page, size);
             return listingRepository.findAll(
-                    buildSearchSpecificationWithDistrictPriority(query, category, priceMin, priceMax, buyerDistrict, sort),
+                    buildSearchSpecificationWithDistrictPriority(query, categorySlugs, priceMin, priceMax, buyerDistrict, sort),
                     pageable
             ).map(ListingResponse::fromEntity);
         }
@@ -85,7 +88,7 @@ public class SearchService {
     }
 
     /**
-     * Get similar listings — same category + district as the given listing, max {@code limit} results.
+     * Get similar listings — same category + district, max {@code limit} results.
      * Excludes the source listing itself.
      */
     public List<ListingResponse> getSimilarListings(Long listingId, int limit) {
@@ -104,93 +107,102 @@ public class SearchService {
     }
 
     /**
-     * Build a JPA Specification for search with AND logic on all filters.
-     * Only returns ACTIVE listings.
+     * Resolves a category slug to a list of slugs to filter by.
+     * If the slug is a parent with active children, returns parent + all child slugs.
+     * If null/blank or leaf, returns a list with just the original slug (or empty).
      */
-    private Specification<Listing> buildSearchSpecification(String query, String category,
+    private List<String> resolveCategorySlugs(String category) {
+        if (category == null || category.isBlank()) {
+            return List.of();
+        }
+        try {
+            Category cat = categoryService.getCategoryBySlug(category);
+            List<Category> children = categoryService.getActiveChildrenOf(cat.getId());
+            if (children.isEmpty()) {
+                return List.of(category);
+            }
+            List<String> slugs = new ArrayList<>();
+            slugs.add(category);
+            children.forEach(c -> slugs.add(c.getSlug()));
+            return slugs;
+        } catch (Exception e) {
+            return List.of(category);
+        }
+    }
+
+    /**
+     * Builds a category predicate: single equality or IN depending on slug count.
+     */
+    private Predicate buildCategoryPredicate(Root<Listing> root, CriteriaBuilder cb, List<String> slugs) {
+        if (slugs.isEmpty()) return null;
+        if (slugs.size() == 1) return cb.equal(root.get("category"), slugs.get(0));
+        return root.get("category").in(slugs);
+    }
+
+    /**
+     * Build a JPA Specification for search with AND logic on all filters.
+     */
+    private Specification<Listing> buildSearchSpecification(String query, List<String> categorySlugs,
                                                              String district, Double priceMin,
                                                              Double priceMax, String buyerDistrict) {
         return (Root<Listing> root, CriteriaQuery<?> cq, CriteriaBuilder cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Always filter by ACTIVE status
             predicates.add(cb.equal(root.get("status"), "ACTIVE"));
 
-            // Text query filter: title OR titleEn OR description (case insensitive)
             if (query != null && !query.isBlank()) {
                 String pattern = "%" + query.toLowerCase() + "%";
-                Predicate titleMatch = cb.like(cb.lower(root.get("title")), pattern);
-                Predicate titleEnMatch = cb.like(cb.lower(root.get("titleEn")), pattern);
-                Predicate descMatch = cb.like(cb.lower(root.get("description")), pattern);
-                predicates.add(cb.or(titleMatch, titleEnMatch, descMatch));
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), pattern),
+                        cb.like(cb.lower(root.get("titleEn")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
+                ));
             }
 
-            // Category filter (exact match)
-            if (category != null && !category.isBlank()) {
-                predicates.add(cb.equal(root.get("category"), category));
-            }
+            Predicate catPredicate = buildCategoryPredicate(root, cb, categorySlugs);
+            if (catPredicate != null) predicates.add(catPredicate);
 
-            // District filter (exact match)
             if (district != null && !district.isBlank()) {
                 predicates.add(cb.equal(root.get("district"), district));
             }
-
-            // Price range filters
-            if (priceMin != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), priceMin));
-            }
-            if (priceMax != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), priceMax));
-            }
+            if (priceMin != null) predicates.add(cb.greaterThanOrEqualTo(root.get("price"), priceMin));
+            if (priceMax != null) predicates.add(cb.lessThanOrEqualTo(root.get("price"), priceMax));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
     /**
-     * Build a JPA Specification that applies district prioritization in the ORDER BY clause.
-     * When a buyer has a district set but no explicit district filter, results from the
-     * buyer's district appear first, then results from other districts.
+     * Build a JPA Specification with district prioritization in ORDER BY.
      */
     private Specification<Listing> buildSearchSpecificationWithDistrictPriority(
-            String query, String category, Double priceMin, Double priceMax,
+            String query, List<String> categorySlugs, Double priceMin, Double priceMax,
             String buyerDistrict, String sort) {
         return (Root<Listing> root, CriteriaQuery<?> cq, CriteriaBuilder cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Always filter by ACTIVE status
             predicates.add(cb.equal(root.get("status"), "ACTIVE"));
 
-            // Text query filter
             if (query != null && !query.isBlank()) {
                 String pattern = "%" + query.toLowerCase() + "%";
-                Predicate titleMatch = cb.like(cb.lower(root.get("title")), pattern);
-                Predicate titleEnMatch = cb.like(cb.lower(root.get("titleEn")), pattern);
-                Predicate descMatch = cb.like(cb.lower(root.get("description")), pattern);
-                predicates.add(cb.or(titleMatch, titleEnMatch, descMatch));
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), pattern),
+                        cb.like(cb.lower(root.get("titleEn")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
+                ));
             }
 
-            // Category filter
-            if (category != null && !category.isBlank()) {
-                predicates.add(cb.equal(root.get("category"), category));
-            }
+            Predicate catPredicate = buildCategoryPredicate(root, cb, categorySlugs);
+            if (catPredicate != null) predicates.add(catPredicate);
 
-            // Price range filters
-            if (priceMin != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), priceMin));
-            }
-            if (priceMax != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), priceMax));
-            }
+            if (priceMin != null) predicates.add(cb.greaterThanOrEqualTo(root.get("price"), priceMin));
+            if (priceMax != null) predicates.add(cb.lessThanOrEqualTo(root.get("price"), priceMax));
 
-            // District prioritization in ORDER BY
             List<Order> orders = new ArrayList<>();
-            // Primary sort: buyer's district first
             orders.add(cb.asc(cb.selectCase()
                     .when(cb.equal(root.get("district"), buyerDistrict), 0)
                     .otherwise(1)));
 
-            // Secondary sort based on the sort parameter
             if (sort != null) {
                 switch (sort) {
                     case "price_asc" -> orders.add(cb.asc(root.get("price")));
@@ -203,7 +215,6 @@ public class SearchService {
             }
 
             cq.orderBy(orders);
-
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
@@ -212,9 +223,7 @@ public class SearchService {
      * Resolve sort string to Spring Data Sort object.
      */
     private Sort resolveSort(String sort) {
-        if (sort == null || sort.isBlank()) {
-            return Sort.by("createdAt").descending();
-        }
+        if (sort == null || sort.isBlank()) return Sort.by("createdAt").descending();
         return switch (sort) {
             case "price_asc" -> Sort.by("price").ascending();
             case "price_desc" -> Sort.by("price").descending();

@@ -15,6 +15,9 @@ public interface ListingRepository extends JpaRepository<Listing, Long>, JpaSpec
 
     Page<Listing> findByCategoryAndStatus(String category, String status, Pageable pageable);
 
+    // Fetch listings for multiple category slugs (parent + subcategories)
+    Page<Listing> findByCategoryInAndStatus(List<String> categories, String status, Pageable pageable);
+
     Page<Listing> findByUserIdAndStatus(Long userId, String status, Pageable pageable);
 
     Page<Listing> findByUserId(Long userId, Pageable pageable);

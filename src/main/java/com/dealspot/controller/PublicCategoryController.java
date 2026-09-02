@@ -19,9 +19,7 @@ public class PublicCategoryController {
 
     @GetMapping
     public ResponseEntity<List<CategoryPublicResponse>> getActiveCategories() {
-        List<CategoryPublicResponse> categories = categoryService.getActiveCategories().stream()
-                .map(CategoryPublicResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(categories);
+        // Returns top-level categories with subcategories nested inside
+        return ResponseEntity.ok(categoryService.getActiveCategoriesTree());
     }
 }

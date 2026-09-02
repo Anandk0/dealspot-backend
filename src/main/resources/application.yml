@@ -80,4 +80,4 @@ email-otp:
 # CORS
 app:
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://192.168.31.186:3000,http://10.83.216.233:3000,http://10.83.216.233:8081,https://dealspot-8w5z.onrender.com,https://6pl77msv-3000.inc1.devtunnels.ms}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://192.168.31.186:3000,https://readily-kodak-collar-bottle.trycloudflare.com,https://casey-page-highlighted-affiliated.trycloudflare.com,https://dealspot-8w5z.onrender.com}

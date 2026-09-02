@@ -3,6 +3,7 @@ package com.dealspot.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "categories")
@@ -41,6 +42,20 @@ public class Category {
     @Column(nullable = false)
     @Builder.Default
     private ModerationLevel moderationLevel = ModerationLevel.CHECKER_ONLY;
+
+    // Parent category — null means this is a top-level category
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Category parent;
+
+    // Children — only populated for top-level categories when needed
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
+    private List<Category> children = new java.util.ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     @Builder.Default

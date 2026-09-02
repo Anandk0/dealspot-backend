@@ -1,5 +1,6 @@
 package com.dealspot.service;
 
+import com.dealspot.entity.Category;
 import com.dealspot.entity.PaymentOrder;
 import com.dealspot.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,28 @@ public class StatsService {
     private final UserRepository userRepository;
     private final ListingRepository listingRepository;
     private final PaymentOrderRepository paymentOrderRepository;
+    private final CategoryRepository categoryRepository;
+
+    /**
+     * Builds a map of subcategory slug → parent slug for all categories that have a parent.
+     * Used to roll up subcategory data under their parent in stats/revenue breakdowns.
+     */
+    private Map<String, String> buildSubToParentSlugMap() {
+        List<Category> all = categoryRepository.findAllByOrderBySortOrderAsc();
+        Map<Long, String> idToSlug = all.stream()
+                .collect(Collectors.toMap(Category::getId, Category::getSlug));
+
+        Map<String, String> subToParent = new HashMap<>();
+        for (Category cat : all) {
+            if (cat.getParent() != null) {
+                String parentSlug = idToSlug.get(cat.getParent().getId());
+                if (parentSlug != null) {
+                    subToParent.put(cat.getSlug(), parentSlug);
+                }
+            }
+        }
+        return subToParent;
+    }
 
     /**
      * Returns KPI dashboard stats:
@@ -87,14 +110,28 @@ public class StatsService {
                 .collect(Collectors.toList());
         stats.put("dailyRevenue", dailyRevenue);
 
-        // Category breakdown
+        // Category breakdown — roll up subcategories under their parent
         List<Object[]> categoryRaw = paymentOrderRepository.findRevenueByCategoryBetween(fromDt, toDt);
-        List<Map<String, Object>> categoryBreakdown = categoryRaw.stream()
-                .map(row -> {
+        Map<String, String> subToParent = buildSubToParentSlugMap();
+
+        Map<String, long[]> rolledUp = new LinkedHashMap<>();
+        for (Object[] row : categoryRaw) {
+            String slug = row[0] != null ? row[0].toString() : "unknown";
+            long amount = ((Number) row[1]).longValue();
+            long count = ((Number) row[2]).longValue();
+            // Roll up to parent if this is a subcategory
+            String key = subToParent.getOrDefault(slug, slug);
+            rolledUp.computeIfAbsent(key, k -> new long[]{0L, 0L});
+            rolledUp.get(key)[0] += amount;
+            rolledUp.get(key)[1] += count;
+        }
+
+        List<Map<String, Object>> categoryBreakdown = rolledUp.entrySet().stream()
+                .map(e -> {
                     Map<String, Object> entry = new HashMap<>();
-                    entry.put("category", row[0] != null ? row[0].toString() : "unknown");
-                    entry.put("amount", ((Number) row[1]).longValue());
-                    entry.put("count", ((Number) row[2]).longValue());
+                    entry.put("category", e.getKey());
+                    entry.put("amount", e.getValue()[0]);
+                    entry.put("count", e.getValue()[1]);
                     return entry;
                 })
                 .collect(Collectors.toList());
@@ -168,13 +205,23 @@ public class StatsService {
         // Total listings
         stats.put("totalListings", listingRepository.count());
 
-        // Category distribution
+        // Category distribution — roll up subcategories under their parent
         List<Object[]> categoryRaw = listingRepository.countGroupByCategory();
-        List<Map<String, Object>> categoryDistribution = categoryRaw.stream()
-                .map(row -> {
+        Map<String, String> subToParent = buildSubToParentSlugMap();
+
+        Map<String, Long> rolledUp = new LinkedHashMap<>();
+        for (Object[] row : categoryRaw) {
+            String slug = row[0] != null ? row[0].toString() : "unknown";
+            long count = ((Number) row[1]).longValue();
+            String key = subToParent.getOrDefault(slug, slug);
+            rolledUp.merge(key, count, Long::sum);
+        }
+
+        List<Map<String, Object>> categoryDistribution = rolledUp.entrySet().stream()
+                .map(e -> {
                     Map<String, Object> entry = new HashMap<>();
-                    entry.put("category", row[0] != null ? row[0].toString() : "unknown");
-                    entry.put("count", ((Number) row[1]).longValue());
+                    entry.put("category", e.getKey());
+                    entry.put("count", e.getValue());
                     return entry;
                 })
                 .collect(Collectors.toList());

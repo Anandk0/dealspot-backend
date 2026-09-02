@@ -27,14 +27,15 @@ public class AdminCategoryController {
     private final AdminService adminService;
     private final ListingRepository listingRepository;
 
+    /** GET /api/admin/categories — returns full tree (parents + subcategories nested) */
     @GetMapping
     public ResponseEntity<List<CategoryAdminResponse>> getAllCategories(
             @AuthenticationPrincipal User user) {
         adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
-        List<CategoryAdminResponse> categories = categoryService.getAllCategoriesAdmin();
-        return ResponseEntity.ok(categories);
+        return ResponseEntity.ok(categoryService.getAllCategoriesAdmin());
     }
 
+    /** POST /api/admin/categories — create parent or subcategory (set parentId for sub) */
     @PostMapping
     public ResponseEntity<CategoryAdminResponse> createCategory(
             @Valid @RequestBody CategoryRequest request,
@@ -45,6 +46,7 @@ public class AdminCategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /** PUT /api/admin/categories/{id} — update category (set parentId=null to promote to top-level) */
     @PutMapping("/{id}")
     public ResponseEntity<CategoryAdminResponse> updateCategory(
             @PathVariable Long id,
@@ -57,6 +59,7 @@ public class AdminCategoryController {
         return ResponseEntity.ok(response);
     }
 
+    /** DELETE /api/admin/categories/{id} — delete (blocked if has listings or subcategories) */
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteCategory(
             @PathVariable Long id,
@@ -66,6 +69,7 @@ public class AdminCategoryController {
         return ResponseEntity.ok(Map.of("message", "Category deleted successfully"));
     }
 
+    /** PUT /api/admin/categories/{id}/settings — update moderation level only */
     @PutMapping("/{id}/settings")
     public ResponseEntity<CategoryAdminResponse> updateSettings(
             @PathVariable Long id,
@@ -73,12 +77,16 @@ public class AdminCategoryController {
             @AuthenticationPrincipal User user) {
         adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
         categoryService.updateModerationLevel(id, request.getModerationLevel(), user);
-        // Re-fetch the category to return updated state
+        // Re-fetch from tree to return updated state with subcategories
         List<CategoryAdminResponse> allCategories = categoryService.getAllCategoriesAdmin();
         CategoryAdminResponse response = allCategories.stream()
                 .filter(c -> c.getId().equals(id))
                 .findFirst()
-                .orElseThrow();
+                .orElseGet(() -> allCategories.stream()
+                        .flatMap(c -> c.getSubcategories().stream())
+                        .filter(c -> c.getId().equals(id))
+                        .findFirst()
+                        .orElseThrow());
         return ResponseEntity.ok(response);
     }
 }

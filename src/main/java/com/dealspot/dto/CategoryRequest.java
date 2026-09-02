@@ -19,4 +19,7 @@ public class CategoryRequest {
     private Integer sortOrder;
     private Boolean active;
     private ModerationLevel moderationLevel;
+
+    // null = top-level category, set = subcategory of the given parent
+    private Long parentId;
 }
