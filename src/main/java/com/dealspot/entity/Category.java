@@ -43,6 +43,11 @@ public class Category {
     @Builder.Default
     private ModerationLevel moderationLevel = ModerationLevel.CHECKER_ONLY;
 
+    // When true, contact details are free (no payment required)
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isFree = false;
+
     // Parent category — null means this is a top-level category
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")

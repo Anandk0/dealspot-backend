@@ -70,4 +70,32 @@ public class AuthController {
         boolean verified = otpService.verifyOtp(phone, otp);
         return ResponseEntity.ok(Map.of("verified", verified));
     }
+
+    // ─── Email OTP (for registration) ─────────────────────────
+
+    @PostMapping("/email-otp/send")
+    public ResponseEntity<Map<String, Object>> sendEmailOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+        String devOtp = otpService.sendEmailOtp(email.trim().toLowerCase());
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("message", "OTP sent to your email");
+        if (devOtp != null) {
+            response.put("otp", devOtp); // Only in dev mode
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/email-otp/verify")
+    public ResponseEntity<Map<String, Object>> verifyEmailOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String otp = body.get("otp");
+        if (email == null || otp == null) {
+            throw new RuntimeException("Email and OTP are required");
+        }
+        boolean verified = otpService.verifyEmailOtp(email.trim().toLowerCase(), otp);
+        return ResponseEntity.ok(Map.of("verified", verified));
+    }
 }

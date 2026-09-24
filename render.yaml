@@ -3,11 +3,13 @@ services:
     name: dealspot-backend
     runtime: docker
     dockerfilePath: ./Dockerfile
+    plan: free
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: dealspot-db
-          property: connectionURI
+      # JDBC URL — set manually in dashboard as: jdbc:postgresql://HOST/DBNAME
+      # (take the Internal Database URL from Render, replace "postgresql://user:pass@"
+      #  prefix with "jdbc:postgresql://" and put user/pass in the fields below)
+      - key: JDBC_DATABASE_URL
+        sync: false
       - key: DB_USERNAME
         fromDatabase:
           name: dealspot-db
@@ -18,14 +20,27 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      # ── Set these manually in the Render dashboard (marked sync:false) ──
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      # Email OTP (Gmail SMTP) — set a Gmail App Password, not your real password
+      - key: EMAIL_OTP_ENABLED
+        value: "true"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      # CORS — update with your actual Vercel frontend URL after deploy
       - key: CORS_ORIGINS
-        value: https://dealspot-8w5z.onrender.com,https://dealspot-frontend.onrender.com
+        sync: false
       - key: PORT
         value: "8080"
 

@@ -25,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RecaptchaService recaptchaService;
+    private final OtpService otpService;
 
     public AuthResponse register(RegisterRequest request) {
         // Verify reCAPTCHA
@@ -32,18 +33,28 @@ public class AuthService {
             throw new RuntimeException("reCAPTCHA verification failed");
         }
 
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : null;
+
+        // Email must be verified via OTP before registration is allowed
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+        if (!otpService.isEmailVerified(email)) {
+            throw new RuntimeException("Please verify your email with OTP before registering");
+        }
+
         if (userRepository.existsByPhone(request.getPhone())) {
             throw new RuntimeException("Phone number already registered");
         }
 
-        if (request.getEmail() != null && !request.getEmail().isBlank()
-                && userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("Email already registered");
         }
 
         User user = User.builder()
                 .phone(request.getPhone())
-                .email(request.getEmail() != null && !request.getEmail().isBlank() ? request.getEmail() : null)
+                .email(email)
+                .emailVerified(true)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .location(request.getLocation())

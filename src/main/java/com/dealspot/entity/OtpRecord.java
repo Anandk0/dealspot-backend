@@ -16,8 +16,10 @@ public class OtpRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    // Either phone OR email is set depending on OTP channel
     private String phone;
+
+    private String email;
 
     @Column(nullable = false)
     private String otpCode;

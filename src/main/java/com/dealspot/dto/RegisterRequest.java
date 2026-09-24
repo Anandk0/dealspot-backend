@@ -1,5 +1,6 @@
 package com.dealspot.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -9,6 +10,8 @@ public class RegisterRequest {
     @NotBlank(message = "Phone number is required")
     private String phone;
 
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email address")
     private String email;
 
     @NotBlank(message = "Password is required")

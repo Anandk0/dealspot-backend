@@ -35,6 +35,26 @@ public class CategoryService {
     }
 
     /**
+     * Returns true if the given category slug is free — i.e. the category itself
+     * is marked free, OR its parent category is marked free.
+     * Free categories reveal contact details without payment.
+     */
+    public boolean isCategoryFree(String slug) {
+        try {
+            Category category = categoryRepository.findBySlug(slug).orElse(null);
+            if (category == null) return false;
+            if (Boolean.TRUE.equals(category.getIsFree())) return true;
+            // Inherit from parent
+            if (category.getParent() != null && Boolean.TRUE.equals(category.getParent().getIsFree())) {
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Returns all active TOP-LEVEL categories with their active subcategories nested.
      * Used by the public /api/categories endpoint.
      * *** Existing behaviour preserved — only top-level items returned at root level ***
@@ -147,6 +167,7 @@ public class CategoryService {
                 .active(request.getActive() != null ? request.getActive() : true)
                 .moderationLevel(request.getModerationLevel() != null
                         ? request.getModerationLevel() : ModerationLevel.CHECKER_ONLY)
+                .isFree(request.getIsFree() != null ? request.getIsFree() : false)
                 .parent(parent)
                 .build();
 
@@ -194,6 +215,7 @@ public class CategoryService {
         if (request.getSortOrder() != null) category.setSortOrder(request.getSortOrder());
         if (request.getActive() != null) category.setActive(request.getActive());
         if (request.getModerationLevel() != null) category.setModerationLevel(request.getModerationLevel());
+        if (request.getIsFree() != null) category.setIsFree(request.getIsFree());
 
         // Update parent — null means "make it a top-level category"
         if (request.getParentId() != null) {

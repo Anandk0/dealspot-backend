@@ -3,7 +3,10 @@ spring:
     name: dealspot-backend
 
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/dealspot}
+    # JDBC_DATABASE_URL takes precedence (jdbc:postgresql://...). Falls back to
+    # DATABASE_URL for local dev. Render provides host/db via separate env vars
+    # that we compose into a JDBC URL below.
+    url: ${JDBC_DATABASE_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/dealspot}}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
@@ -80,4 +83,4 @@ email-otp:
 # CORS
 app:
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://192.168.31.186:3000,https://readily-kodak-collar-bottle.trycloudflare.com,https://casey-page-highlighted-affiliated.trycloudflare.com,https://dealspot-8w5z.onrender.com}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://192.168.1.159:3000,https://dealspot-8w5z.onrender.com}

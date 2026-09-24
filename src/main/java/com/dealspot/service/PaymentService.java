@@ -24,6 +24,7 @@ public class PaymentService {
     private final PaymentOrderRepository paymentOrderRepository;
     private final ContactUnlockRepository contactUnlockRepository;
     private final ListingRepository listingRepository;
+    private final CategoryService categoryService;
 
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
@@ -35,14 +36,27 @@ public class PaymentService {
     private int contactUnlockAmount;
 
     /**
-     * Check if user has already unlocked contact for this listing
+     * Returns true if the listing belongs to a free category (or free parent category).
+     */
+    public boolean isListingFree(Long listingId) {
+        Listing listing = listingRepository.findById(listingId).orElse(null);
+        if (listing == null) return false;
+        return categoryService.isCategoryFree(listing.getCategory());
+    }
+
+    /**
+     * Check if user has access to contact for this listing.
+     * Access is granted if: the category is free, OR the user has paid to unlock.
      */
     public boolean isContactUnlocked(Long buyerId, Long listingId) {
+        if (isListingFree(listingId)) {
+            return true;
+        }
         return contactUnlockRepository.existsByBuyerIdAndListingId(buyerId, listingId);
     }
 
     /**
-     * Get seller phone if contact is unlocked
+     * Get seller phone if contact is unlocked (either free category or paid).
      */
     public String getUnlockedContact(Long buyerId, Long listingId) {
         if (!isContactUnlocked(buyerId, listingId)) {
@@ -57,6 +71,11 @@ public class PaymentService {
      * Create Razorpay order for contact unlock
      */
     public Map<String, Object> createUnlockOrder(Long listingId, User buyer) throws RazorpayException {
+        // Free category — no payment needed
+        if (isListingFree(listingId)) {
+            throw new RuntimeException("This listing's contact is free — no payment required");
+        }
+
         // Check if already unlocked
         if (contactUnlockRepository.existsByBuyerIdAndListingId(buyer.getId(), listingId)) {
             throw new RuntimeException("Contact already unlocked for this listing");

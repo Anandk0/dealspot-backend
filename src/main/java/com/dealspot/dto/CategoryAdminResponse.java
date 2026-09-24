@@ -31,6 +31,7 @@ public class CategoryAdminResponse {
     private LocalDateTime updatedAt;
     private Long parentId;                              // null = top-level
     private String parentName;                          // convenience display field
+    private Boolean isFree;                             // free contact (no payment)
     @Builder.Default
     private List<CategoryAdminResponse> subcategories = Collections.emptyList();
 
@@ -51,6 +52,7 @@ public class CategoryAdminResponse {
                 .updatedAt(category.getUpdatedAt())
                 .parentId(category.getParent() != null ? category.getParent().getId() : null)
                 .parentName(category.getParent() != null ? category.getParent().getName() : null)
+                .isFree(category.getIsFree())
                 .subcategories(Collections.emptyList())
                 .build();
     }

@@ -16,9 +16,13 @@ import java.util.Random;
 public class OtpService {
 
     private final OtpRepository otpRepository;
+    private final EmailService emailService;
 
     @Value("${otp.enabled}")
     private boolean otpEnabled;
+
+    @Value("${email-otp.enabled:false}")
+    private boolean emailOtpEnabled;
 
     @Value("${otp.expiry-minutes}")
     private int expiryMinutes;
@@ -70,5 +74,61 @@ public class OtpService {
         record.setVerified(true);
         otpRepository.save(record);
         return true;
+    }
+
+    // ─── Email OTP ────────────────────────────────────────────
+
+    /**
+     * Generate and email an OTP. When email OTP is disabled, uses "123456" for dev.
+     * Returns the OTP only in dev mode (for testing), null when enabled.
+     */
+    public String sendEmailOtp(String email) {
+        String otp;
+
+        if (!emailOtpEnabled) {
+            otp = "123456"; // Dev mode
+            log.info("DEV MODE EMAIL OTP for {}: {}", email, otp);
+        } else {
+            otp = String.format("%06d", random.nextInt(1_000_000));
+        }
+
+        OtpRecord record = OtpRecord.builder()
+                .email(email)
+                .otpCode(otp)
+                .expiresAt(LocalDateTime.now().plusMinutes(expiryMinutes))
+                .build();
+        otpRepository.save(record);
+
+        // Send via email (EmailService logs in dev mode, actually sends when enabled)
+        emailService.sendOtpEmail(email, otp);
+
+        return emailOtpEnabled ? null : otp;
+    }
+
+    /**
+     * Verify the OTP entered for an email. Marks the record verified on success.
+     */
+    public boolean verifyEmailOtp(String email, String otpCode) {
+        OtpRecord record = otpRepository
+                .findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(email)
+                .orElse(null);
+
+        if (record == null) return false;
+        if (record.isExpired()) return false;
+        if (!record.getOtpCode().equals(otpCode)) return false;
+
+        record.setVerified(true);
+        otpRepository.save(record);
+        return true;
+    }
+
+    /**
+     * Returns true if the given email has a verified (non-expired-check-free) OTP record.
+     * Used to gate registration.
+     */
+    public boolean isEmailVerified(String email) {
+        return otpRepository
+                .findTopByEmailAndVerifiedTrueOrderByCreatedAtDesc(email)
+                .isPresent();
     }
 }

@@ -22,6 +22,7 @@ public class CategoryPublicResponse {
     private String imageUrl;
     private String color;
     private Long parentId;                          // null = top-level
+    private Boolean isFree;                         // free contact (no payment)
     @Builder.Default
     private List<CategoryPublicResponse> subcategories = Collections.emptyList();
 
@@ -35,6 +36,7 @@ public class CategoryPublicResponse {
                 .imageUrl(category.getImageUrl())
                 .color(category.getColor())
                 .parentId(category.getParent() != null ? category.getParent().getId() : null)
+                .isFree(category.getIsFree())
                 .subcategories(Collections.emptyList())
                 .build();
     }

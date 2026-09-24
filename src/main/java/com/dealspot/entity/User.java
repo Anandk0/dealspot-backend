@@ -34,6 +34,10 @@ public class User {
     @Builder.Default
     private Boolean phoneVerified = false;
 
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private Boolean emailVerified = false;
+
     @Column(nullable = false)
     @Builder.Default
     private String role = "USER";

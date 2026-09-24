@@ -50,9 +50,11 @@ public class PaymentController {
             @PathVariable Long listingId,
             @AuthenticationPrincipal User user) {
 
+        boolean free = paymentService.isListingFree(listingId);
         boolean unlocked = paymentService.isContactUnlocked(user.getId(), listingId);
         Map<String, Object> response = new java.util.HashMap<>();
         response.put("unlocked", unlocked);
+        response.put("free", free);
 
         if (unlocked) {
             String phone = paymentService.getUnlockedContact(user.getId(), listingId);

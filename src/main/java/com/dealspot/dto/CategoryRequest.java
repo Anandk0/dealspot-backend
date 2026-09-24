@@ -22,4 +22,7 @@ public class CategoryRequest {
 
     // null = top-level category, set = subcategory of the given parent
     private Long parentId;
+
+    // When true, contact details are free (no payment needed)
+    private Boolean isFree;
 }

@@ -1,7 +1,6 @@
 package com.dealspot.service;
 
 import com.dealspot.dto.ListingResponse;
-import com.dealspot.entity.Category;
 import com.dealspot.entity.Listing;
 import com.dealspot.repository.ListingRepository;
 import com.dealspot.util.PaginationUtil;
@@ -27,7 +26,6 @@ import java.util.List;
 public class SearchService {
 
     private final ListingRepository listingRepository;
-    private final CategoryService categoryService;
 
     /**
      * Advanced search with filters, sort, and buyer district prioritization.
@@ -37,8 +35,9 @@ public class SearchService {
                                          Double priceMin, Double priceMax, String sort,
                                          String buyerDistrict, int page, int size) {
 
-        // Expand category slug to include subcategory slugs if applicable
-        List<String> categorySlugs = resolveCategorySlugs(category);
+        List<String> categorySlugs = category != null && !category.isBlank()
+                ? List.of(category)
+                : List.of();
 
         Specification<Listing> spec = buildSearchSpecification(query, categorySlugs, district, priceMin, priceMax, buyerDistrict);
 
@@ -104,30 +103,6 @@ public class SearchService {
         return listingRepository.findSimilarListings(
                 listing.getCategory(), listing.getDistrict(), listingId, pageable
         ).stream().map(ListingResponse::fromEntity).toList();
-    }
-
-    /**
-     * Resolves a category slug to a list of slugs to filter by.
-     * If the slug is a parent with active children, returns parent + all child slugs.
-     * If null/blank or leaf, returns a list with just the original slug (or empty).
-     */
-    private List<String> resolveCategorySlugs(String category) {
-        if (category == null || category.isBlank()) {
-            return List.of();
-        }
-        try {
-            Category cat = categoryService.getCategoryBySlug(category);
-            List<Category> children = categoryService.getActiveChildrenOf(cat.getId());
-            if (children.isEmpty()) {
-                return List.of(category);
-            }
-            List<String> slugs = new ArrayList<>();
-            slugs.add(category);
-            children.forEach(c -> slugs.add(c.getSlug()));
-            return slugs;
-        } catch (Exception e) {
-            return List.of(category);
-        }
     }
 
     /**
