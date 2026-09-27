@@ -15,7 +15,7 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS promoted BOOLEAN NOT NULL DEFAULT 
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS promoted_until TIMESTAMP;
 
 -- Chat / Conversations
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
     id BIGSERIAL PRIMARY KEY,
     listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     buyer_id BIGINT NOT NULL REFERENCES users(id),
@@ -25,10 +25,10 @@ CREATE TABLE conversations (
     UNIQUE(listing_id, buyer_id)
 );
 
-CREATE INDEX idx_conversations_buyer ON conversations(buyer_id);
-CREATE INDEX idx_conversations_seller ON conversations(seller_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_buyer ON conversations(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_seller ON conversations(seller_id);
 
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id BIGSERIAL PRIMARY KEY,
     conversation_id BIGINT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id BIGINT NOT NULL REFERENCES users(id),
@@ -37,10 +37,10 @@ CREATE TABLE messages (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_messages_conversation ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at);
 
 -- Notifications
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -52,10 +52,10 @@ CREATE TABLE notifications (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_user ON notifications(user_id, read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read, created_at DESC);
 
 -- Reviews / Ratings
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
     id BIGSERIAL PRIMARY KEY,
     reviewer_id BIGINT NOT NULL REFERENCES users(id),
     target_user_id BIGINT NOT NULL REFERENCES users(id),
@@ -66,10 +66,10 @@ CREATE TABLE reviews (
     UNIQUE(reviewer_id, listing_id)
 );
 
-CREATE INDEX idx_reviews_target ON reviews(target_user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_target ON reviews(target_user_id);
 
 -- Price Offers / Negotiation
-CREATE TABLE offers (
+CREATE TABLE IF NOT EXISTS offers (
     id BIGSERIAL PRIMARY KEY,
     listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     buyer_id BIGINT NOT NULL REFERENCES users(id),
@@ -81,11 +81,11 @@ CREATE TABLE offers (
     responded_at TIMESTAMP
 );
 
-CREATE INDEX idx_offers_listing ON offers(listing_id);
-CREATE INDEX idx_offers_seller ON offers(seller_id, status);
+CREATE INDEX IF NOT EXISTS idx_offers_listing ON offers(listing_id);
+CREATE INDEX IF NOT EXISTS idx_offers_seller ON offers(seller_id, status);
 
 -- Reports / Flagging
-CREATE TABLE reports (
+CREATE TABLE IF NOT EXISTS reports (
     id BIGSERIAL PRIMARY KEY,
     reporter_id BIGINT NOT NULL REFERENCES users(id),
     target_type VARCHAR(20) NOT NULL,
@@ -98,4 +98,4 @@ CREATE TABLE reports (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_reports_status ON reports(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);

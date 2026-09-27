@@ -37,6 +37,7 @@ class UserBanAuthFlowIntegrationTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtUtil jwtUtil;
     @Mock private RecaptchaService recaptchaService;
+    @Mock private OtpService otpService;
 
     private UserManagementService userManagementService;
     private AuthService authService;
@@ -48,7 +49,7 @@ class UserBanAuthFlowIntegrationTest {
     void setUp() {
         // Both services share the same mock repositories to simulate state propagation
         userManagementService = new UserManagementService(userRepository, refreshTokenRepository, auditService);
-        authService = new AuthService(userRepository, refreshTokenRepository, passwordEncoder, jwtUtil, recaptchaService);
+        authService = new AuthService(userRepository, refreshTokenRepository, passwordEncoder, jwtUtil, recaptchaService, otpService);
 
         targetUser = User.builder()
                 .id(5L)

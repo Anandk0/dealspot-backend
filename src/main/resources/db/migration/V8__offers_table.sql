@@ -1,4 +1,7 @@
 -- Offers table for buyer-seller negotiations
+-- Drop the earlier V4 version (different schema) and recreate with counter_amount
+DROP TABLE IF EXISTS offers CASCADE;
+
 CREATE TABLE offers (
     id BIGSERIAL PRIMARY KEY,
     listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -13,10 +16,10 @@ CREATE TABLE offers (
 );
 
 -- Partial unique index: only one PENDING offer per buyer per listing
-CREATE UNIQUE INDEX idx_offers_one_pending_per_buyer_listing
+CREATE UNIQUE INDEX IF NOT EXISTS idx_offers_one_pending_per_buyer_listing
     ON offers(listing_id, buyer_id) WHERE status = 'PENDING';
 
 -- Indexes for common queries
-CREATE INDEX idx_offers_buyer ON offers(buyer_id);
-CREATE INDEX idx_offers_seller_status ON offers(seller_id, status);
-CREATE INDEX idx_offers_listing ON offers(listing_id);
+CREATE INDEX IF NOT EXISTS idx_offers_buyer ON offers(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_offers_seller_status ON offers(seller_id, status);
+CREATE INDEX IF NOT EXISTS idx_offers_listing ON offers(listing_id);

@@ -32,6 +32,7 @@ class BannedUserAuthPropertyTest {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RecaptchaService recaptchaService;
+    private final OtpService otpService;
     private final AuthService authService;
 
     BannedUserAuthPropertyTest() {
@@ -40,7 +41,8 @@ class BannedUserAuthPropertyTest {
         this.passwordEncoder = mock(PasswordEncoder.class);
         this.jwtUtil = mock(JwtUtil.class);
         this.recaptchaService = mock(RecaptchaService.class);
-        this.authService = new AuthService(userRepository, refreshTokenRepository, passwordEncoder, jwtUtil, recaptchaService);
+        this.otpService = mock(OtpService.class);
+        this.authService = new AuthService(userRepository, refreshTokenRepository, passwordEncoder, jwtUtil, recaptchaService, otpService);
     }
 
     /**
