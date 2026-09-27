@@ -54,8 +54,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Use allowedOriginPatterns (supports wildcards WITH credentials).
+        // Comma-separated patterns from CORS_ORIGINS env var, e.g.
+        // "https://*.vercel.app,https://dealspot.in"
+        config.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
