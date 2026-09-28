@@ -11,5 +11,6 @@ public class AuthRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
+    
     private String recaptchaToken;
 }
