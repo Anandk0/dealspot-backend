@@ -17,6 +17,7 @@ public class OtpService {
 
     private final OtpRepository otpRepository;
     private final EmailService emailService;
+    private final DisposableEmailValidator disposableEmailValidator;
 
     @Value("${otp.enabled}")
     private boolean otpEnabled;
@@ -83,6 +84,13 @@ public class OtpService {
      * Returns the OTP only in dev mode (for testing), null when enabled.
      */
     public String sendEmailOtp(String email) {
+        // Reject disposable / temporary email addresses
+        if (disposableEmailValidator.isDisposable(email)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Temporary or disposable email addresses are not allowed. Please use a real email.");
+        }
+
         String otp;
 
         if (!emailOtpEnabled) {
