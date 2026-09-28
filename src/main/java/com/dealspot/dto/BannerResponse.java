@@ -16,8 +16,18 @@ public class BannerResponse {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private LocalDateTime createdAt;
+    private Long createdById;
+    private String createdByName;
 
     public static BannerResponse fromEntity(Banner b) {
+        Long creatorId = null;
+        String creatorName = null;
+        if (b.getCreatedBy() != null) {
+            // For a LAZY @ManyToOne the id is available on the proxy without a query;
+            // the name may trigger initialization, which is fine within the request scope.
+            creatorId = b.getCreatedBy().getId();
+            creatorName = b.getCreatedBy().getName();
+        }
         return BannerResponse.builder()
                 .id(b.getId())
                 .title(b.getTitle())
@@ -29,6 +39,8 @@ public class BannerResponse {
                 .startDate(b.getStartDate())
                 .endDate(b.getEndDate())
                 .createdAt(b.getCreatedAt())
+                .createdById(creatorId)
+                .createdByName(creatorName)
                 .build();
     }
 }

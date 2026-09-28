@@ -177,7 +177,8 @@ public class AdminController {
     // ─── Banners ──────────────────────────────────────────
     @GetMapping("/banners")
     public ResponseEntity<List<BannerResponse>> banners(@AuthenticationPrincipal User user) {
-        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        // Common pool: CHECKER, ADMIN and SUPER_ADMIN all see every banner.
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
         return ResponseEntity.ok(adminService.getAllBanners().stream()
                 .map(BannerResponse::fromEntity)
                 .toList());
@@ -187,6 +188,7 @@ public class AdminController {
     public ResponseEntity<BannerResponse> createBanner(
             @Valid @RequestBody CreateBannerRequest request,
             @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
         Banner banner = Banner.builder()
                 .title(request.getTitle())
                 .subtitle(request.getSubtitle())
@@ -209,7 +211,7 @@ public class AdminController {
             @RequestParam(value = "endDate", required = false) String endDate,
             @RequestParam(value = "image", required = false) org.springframework.web.multipart.MultipartFile image,
             @AuthenticationPrincipal User user) {
-        adminService.checkRole(user, "ADMIN", "SUPER_ADMIN");
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
 
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {

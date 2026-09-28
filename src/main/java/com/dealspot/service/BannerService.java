@@ -3,7 +3,7 @@ package com.dealspot.service;
 import com.dealspot.entity.*;
 import com.dealspot.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +33,7 @@ public class BannerService {
     }
 
     public List<Banner> getAllBanners() {
-        return bannerRepository.findAll(Sort.by("createdAt").descending());
+        return bannerRepository.findAllWithCreator();
     }
 
     @Transactional
@@ -78,6 +78,19 @@ public class BannerService {
 
     @Transactional
     public void deleteBanner(Long bannerId, User actor) {
+        Banner banner = bannerRepository.findById(bannerId)
+                .orElseThrow(() -> new RuntimeException("Banner not found"));
+
+        // ADMIN and SUPER_ADMIN can delete any banner. A CHECKER may only delete
+        // banners they created themselves.
+        boolean isAdmin = "ADMIN".equals(actor.getRole()) || "SUPER_ADMIN".equals(actor.getRole());
+        if (!isAdmin) {
+            Long creatorId = banner.getCreatedBy() != null ? banner.getCreatedBy().getId() : null;
+            if (creatorId == null || !creatorId.equals(actor.getId())) {
+                throw new AccessDeniedException("You can only delete banners you created");
+            }
+        }
+
         bannerRepository.deleteById(bannerId);
         auditService.audit(actor, "DELETE_BANNER", "BANNER", bannerId, null);
     }
