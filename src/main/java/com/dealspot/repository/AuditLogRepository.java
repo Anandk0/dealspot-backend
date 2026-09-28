@@ -24,11 +24,20 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     Page<AuditLog> findByActionAndCreatedAtBetweenOrderByCreatedAtDesc(String action, LocalDateTime from, LocalDateTime to, Pageable pageable);
 
-    @Query("SELECT a FROM AuditLog a WHERE " +
-            "(:action IS NULL OR a.action = :action) AND " +
-            "(:from IS NULL OR a.createdAt >= :from) AND " +
-            "(:to IS NULL OR a.createdAt <= :to) " +
-            "ORDER BY a.createdAt DESC")
+    // Native query with explicit casts. PostgreSQL cannot infer the type of a bare
+    // parameter used only in "? IS NULL", so we cast each nullable filter param to
+    // its concrete type (text / timestamp). A separate countQuery is required for
+    // pagination since native queries can't derive it automatically.
+    @Query(value = "SELECT * FROM admin_audit_log a WHERE " +
+            "(CAST(:action AS text) IS NULL OR a.action = :action) AND " +
+            "(CAST(:from AS timestamp) IS NULL OR a.created_at >= :from) AND " +
+            "(CAST(:to AS timestamp) IS NULL OR a.created_at <= :to) " +
+            "ORDER BY a.created_at DESC",
+            countQuery = "SELECT count(*) FROM admin_audit_log a WHERE " +
+            "(CAST(:action AS text) IS NULL OR a.action = :action) AND " +
+            "(CAST(:from AS timestamp) IS NULL OR a.created_at >= :from) AND " +
+            "(CAST(:to AS timestamp) IS NULL OR a.created_at <= :to)",
+            nativeQuery = true)
     Page<AuditLog> findFiltered(
             @Param("action") String action,
             @Param("from") LocalDateTime from,
