@@ -70,6 +70,10 @@ public class AdminService {
         return reportService.getPendingReports(page, size);
     }
 
+    public com.dealspot.dto.UserModerationOverview getOwnerOverviewForListing(Long listingId) {
+        return moderationService.getOwnerOverviewForListing(listingId);
+    }
+
     public void featureListing(Long listingId, boolean featured, User actor) {
         moderationService.featureListing(listingId, featured, actor);
     }

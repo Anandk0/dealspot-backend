@@ -143,6 +143,16 @@ public class AdminController {
                         .map(com.dealspot.dto.ReportResponse::fromEntity));
     }
 
+    // Moderator drill-down: the owner of a reported listing, their reported
+    // ads, and all their posted ads.
+    @GetMapping("/listings/{listingId}/owner-overview")
+    public ResponseEntity<com.dealspot.dto.UserModerationOverview> ownerOverview(
+            @PathVariable Long listingId,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
+        return ResponseEntity.ok(adminService.getOwnerOverviewForListing(listingId));
+    }
+
     @PutMapping("/listings/{listingId}/feature")
     public ResponseEntity<Map<String, String>> feature(
             @PathVariable Long listingId,

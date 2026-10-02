@@ -1,5 +1,7 @@
 package com.dealspot.service;
 
+import com.dealspot.dto.ListingResponse;
+import com.dealspot.dto.UserModerationOverview;
 import com.dealspot.entity.*;
 import com.dealspot.repository.*;
 import com.dealspot.util.PaginationUtil;
@@ -12,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,6 +25,8 @@ import java.util.Set;
 public class ModerationService {
 
     private final ListingRepository listingRepository;
+    private final ReportRepository reportRepository;
+    private final UserRepository userRepository;
     private final AuditService auditService;
     private final NotificationService notificationService;
 
@@ -151,6 +158,71 @@ public class ModerationService {
                 "LISTING",
                 listingId
         );
+    }
+
+    /**
+     * Builds the moderator overview for the owner of a given listing: their
+     * account + ban status, the ads of theirs that have been reported, and all
+     * of their posted ads (any status). Used when a moderator opens a report.
+     */
+    public UserModerationOverview getOwnerOverviewForListing(Long listingId) {
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
+        User owner = listing.getUser();
+
+        // All of this owner's listings (unpaged — a single seller's catalogue is small).
+        List<Listing> all = listingRepository
+                .findByUserId(owner.getId(), Pageable.unpaged())
+                .getContent();
+
+        int activeCount = (int) all.stream().filter(l -> "ACTIVE".equals(l.getStatus())).count();
+
+        List<ListingResponse> allResponses = all.stream()
+                .map(ListingResponse::fromEntity)
+                .toList();
+
+        // Reports against this owner's listings, grouped per listing.
+        List<Long> ownerListingIds = all.stream().map(Listing::getId).toList();
+        Map<Long, List<Report>> reportsByListing = new LinkedHashMap<>();
+        if (!ownerListingIds.isEmpty()) {
+            for (Report r : reportRepository
+                    .findByTargetTypeAndTargetIdInOrderByCreatedAtDesc("LISTING", ownerListingIds)) {
+                reportsByListing.computeIfAbsent(r.getTargetId(), k -> new ArrayList<>()).add(r);
+            }
+        }
+
+        List<UserModerationOverview.ReportedListing> reported = new ArrayList<>();
+        for (Listing l : all) {
+            List<Report> reports = reportsByListing.get(l.getId());
+            if (reports != null && !reports.isEmpty()) {
+                reported.add(UserModerationOverview.ReportedListing.builder()
+                        .listing(ListingResponse.fromEntity(l))
+                        .reportCount(reports.size())
+                        .reasons(reports.stream().map(Report::getReason).distinct().toList())
+                        .build());
+            }
+        }
+
+        UserModerationOverview.OwnerInfo ownerInfo = UserModerationOverview.OwnerInfo.builder()
+                .id(owner.getId())
+                .name(owner.getName())
+                .phone(owner.getPhone())
+                .email(owner.getEmail())
+                .location(owner.getLocation())
+                .district(owner.getDistrict())
+                .role(owner.getRole())
+                .banned(owner.getBanned())
+                .banReason(owner.getBanReason())
+                .createdAt(owner.getCreatedAt())
+                .totalListings(all.size())
+                .activeListings(activeCount)
+                .build();
+
+        return UserModerationOverview.builder()
+                .owner(ownerInfo)
+                .reportedListings(reported)
+                .allListings(allResponses)
+                .build();
     }
 
     @Transactional
