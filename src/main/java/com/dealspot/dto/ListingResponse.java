@@ -20,6 +20,8 @@ public class ListingResponse {
     private String priceUnit;
     private String location;
     private String district;
+    private Double latitude;
+    private Double longitude;
     private String status;
     private List<String> images;
     private Integer viewCount;
@@ -52,6 +54,8 @@ public class ListingResponse {
                 .priceUnit(listing.getPriceUnit())
                 .location(listing.getLocation())
                 .district(listing.getDistrict())
+                .latitude(listing.getLatitude())
+                .longitude(listing.getLongitude())
                 .status(listing.getStatus())
                 .images(listing.getImages())
                 .viewCount(listing.getViewCount())

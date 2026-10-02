@@ -58,6 +58,8 @@ public class ListingService {
                 .priceUnit(request.getPriceUnit())
                 .location(request.getLocation())
                 .district(request.getDistrict())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .breed(request.getBreed())
                 .age(request.getAge())
                 .condition(request.getCondition())

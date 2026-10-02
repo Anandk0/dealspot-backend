@@ -20,6 +20,10 @@ public class ListingRequest {
     private String location;
     private String district;
 
+    // Optional precise coordinates captured from the device at post time.
+    private Double latitude;
+    private Double longitude;
+
     // Category-specific fields
     private String breed;
     private String age;
