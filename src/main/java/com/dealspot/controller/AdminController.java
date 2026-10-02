@@ -131,6 +131,18 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Listing taken down"));
     }
 
+    // ─── Reports ──────────────────────────────────────────
+    @GetMapping("/reports")
+    public ResponseEntity<Page<com.dealspot.dto.ReportResponse>> reports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
+        return ResponseEntity.ok(
+                adminService.getPendingReports(page, size)
+                        .map(com.dealspot.dto.ReportResponse::fromEntity));
+    }
+
     @PutMapping("/listings/{listingId}/feature")
     public ResponseEntity<Map<String, String>> feature(
             @PathVariable Long listingId,

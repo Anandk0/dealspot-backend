@@ -20,6 +20,7 @@ public class AdminService {
     private final BannerService bannerService;
     private final SettingsService settingsService;
     private final AuditService auditService;
+    private final ReportService reportService;
 
     // ─── Role Management ──────────────────────────────────
     public void checkRole(User user, String... allowedRoles) {
@@ -62,6 +63,11 @@ public class AdminService {
 
     public void takeDownListing(Long listingId, String reason, User moderator) {
         moderationService.takeDownListing(listingId, reason, moderator);
+    }
+
+    // ─── Reports ──────────────────────────────────────────
+    public Page<Report> getPendingReports(int page, int size) {
+        return reportService.getPendingReports(page, size);
     }
 
     public void featureListing(Long listingId, boolean featured, User actor) {
