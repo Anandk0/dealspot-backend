@@ -74,6 +74,10 @@ public class AdminService {
         return moderationService.getOwnerOverviewForListing(listingId);
     }
 
+    public void resolveReport(Long reportId, User moderator) {
+        reportService.resolveReport(reportId, moderator);
+    }
+
     public void featureListing(Long listingId, boolean featured, User actor) {
         moderationService.featureListing(listingId, featured, actor);
     }

@@ -153,6 +153,16 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getOwnerOverviewForListing(listingId));
     }
 
+    // Mark a report resolved — removes it from the pending queue.
+    @PutMapping("/reports/{reportId}/resolve")
+    public ResponseEntity<Map<String, String>> resolveReport(
+            @PathVariable Long reportId,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
+        adminService.resolveReport(reportId, user);
+        return ResponseEntity.ok(Map.of("message", "Report resolved"));
+    }
+
     @PutMapping("/listings/{listingId}/feature")
     public ResponseEntity<Map<String, String>> feature(
             @PathVariable Long listingId,
