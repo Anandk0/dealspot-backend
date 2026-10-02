@@ -32,7 +32,8 @@ public class ModerationService {
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
             "PENDING", Set.of("ACTIVE", "REJECTED", "FLAGGED"),
             "FLAGGED", Set.of("ACTIVE", "REJECTED"),
-            "ACTIVE", Set.of("PENDING", "EXPIRED")
+            // ACTIVE listings can be taken down (REJECTED) or flagged by a moderator.
+            "ACTIVE", Set.of("PENDING", "EXPIRED", "REJECTED", "FLAGGED")
     );
 
     /**
@@ -113,6 +114,43 @@ public class ModerationService {
         listingRepository.save(listing);
 
         auditService.audit(moderator, "FLAG_LISTING", "LISTING", listingId, null);
+    }
+
+    /**
+     * Takes down a listing — pulls it out of public view by moving it to REJECTED.
+     * Works for ACTIVE (live), FLAGGED or PENDING listings. A reason is required and
+     * the seller is notified. Used by admins/checkers to remove bad live ads.
+     */
+    @Transactional
+    public void takeDownListing(Long listingId, String reason, User moderator) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A takedown reason is required");
+        }
+
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
+
+        // Already removed — nothing to do.
+        if ("REJECTED".equals(listing.getStatus())) {
+            return;
+        }
+
+        transitionStatus(listing, "REJECTED");
+        listing.setRejectionReason(reason);
+        listing.setModeratedBy(moderator);
+        listing.setModeratedAt(LocalDateTime.now());
+        listingRepository.save(listing);
+
+        auditService.audit(moderator, "TAKEDOWN_LISTING", "LISTING", listingId, reason);
+
+        notificationService.create(
+                listing.getUser(),
+                "Listing Removed",
+                "Your listing '" + listing.getTitle() + "' was removed by our team. Reason: " + reason,
+                "MODERATION",
+                "LISTING",
+                listingId
+        );
     }
 
     @Transactional

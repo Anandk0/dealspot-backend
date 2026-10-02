@@ -60,6 +60,10 @@ public class AdminService {
         moderationService.flagListing(listingId, moderator);
     }
 
+    public void takeDownListing(Long listingId, String reason, User moderator) {
+        moderationService.takeDownListing(listingId, reason, moderator);
+    }
+
     public void featureListing(Long listingId, boolean featured, User actor) {
         moderationService.featureListing(listingId, featured, actor);
     }

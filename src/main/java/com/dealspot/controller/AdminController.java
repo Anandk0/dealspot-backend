@@ -120,6 +120,17 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Listing flagged"));
     }
 
+    // Take down an already-live (or flagged/pending) listing. CHECKER and above.
+    @PutMapping("/listings/{listingId}/takedown")
+    public ResponseEntity<Map<String, String>> takedown(
+            @PathVariable Long listingId,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal User user) {
+        adminService.checkRole(user, "CHECKER", "ADMIN", "SUPER_ADMIN");
+        adminService.takeDownListing(listingId, body.get("reason"), user);
+        return ResponseEntity.ok(Map.of("message", "Listing taken down"));
+    }
+
     @PutMapping("/listings/{listingId}/feature")
     public ResponseEntity<Map<String, String>> feature(
             @PathVariable Long listingId,
