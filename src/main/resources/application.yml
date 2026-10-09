@@ -25,7 +25,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     out-of-order: true
-    repair-on-migrate: ${FLYWAY_REPAIR_ON_MIGRATE:false}
+    repair-on-migrate: true
 
   servlet:
     multipart:
