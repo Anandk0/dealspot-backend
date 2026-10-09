@@ -83,11 +83,11 @@ public class Listing {
     private Double latitude;
     private Double longitude;
 
-    // Flexible per-category attributes as a JSON string (JSONB column).
+    // Flexible per-category attributes as a JSON string (TEXT column).
     // First used by the detailed Property form. Stored/served as raw JSON text;
     // the frontend parses it. Private sub-fields (contact, map) are stripped
     // out of the response until the viewer has unlocked the listing.
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private String details;
 
     private LocalDateTime expiresAt;
