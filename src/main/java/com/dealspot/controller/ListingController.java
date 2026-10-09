@@ -40,8 +40,12 @@ public class ListingController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ListingResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(listingService.getListingById(id));
+    public ResponseEntity<ListingResponse> getById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        // Pass the viewer so private property details (contact + map) are only
+        // included when they've unlocked the listing.
+        return ResponseEntity.ok(listingService.getListingById(id, user));
     }
 
     @GetMapping("/my")

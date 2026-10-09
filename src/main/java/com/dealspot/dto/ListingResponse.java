@@ -38,12 +38,24 @@ public class ListingResponse {
     private String vehicleType;
     private String rateInfo;
 
+    // Flexible per-category attributes (JSON string). The "private" sub-object
+    // (contact + exact map) is stripped out unless the viewer has unlocked.
+    private String details;
+
     // Seller info
     private Long sellerId;
     private String sellerName;
     private String sellerLocation;
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
     public static ListingResponse fromEntity(Listing listing) {
+        // Default: locked view (no private details). Used by list/search feeds.
+        return fromEntity(listing, false);
+    }
+
+    public static ListingResponse fromEntity(Listing listing, boolean unlocked) {
         return ListingResponse.builder()
                 .id(listing.getId())
                 .title(listing.getTitle())
@@ -69,9 +81,32 @@ public class ListingResponse {
                 .experience(listing.getExperience())
                 .vehicleType(listing.getVehicleType())
                 .rateInfo(listing.getRateInfo())
+                .details(sanitizeDetails(listing.getDetails(), unlocked))
                 .sellerId(listing.getUser().getId())
                 .sellerName(listing.getUser().getName())
                 .sellerLocation(listing.getUser().getLocation())
                 .build();
+    }
+
+    /**
+     * Returns the details JSON, removing the "private" block (contact + exact
+     * map coordinates) unless the viewer has unlocked the listing. If parsing
+     * fails or there's nothing private, the original string is returned.
+     */
+    private static String sanitizeDetails(String details, boolean unlocked) {
+        if (details == null || details.isBlank() || unlocked) {
+            return details;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = MAPPER.readTree(details);
+            if (node.has("private")) {
+                ((com.fasterxml.jackson.databind.node.ObjectNode) node).remove("private");
+                return MAPPER.writeValueAsString(node);
+            }
+            return details;
+        } catch (Exception e) {
+            // Malformed JSON — safest is to drop it rather than leak private data.
+            return null;
+        }
     }
 }

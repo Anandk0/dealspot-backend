@@ -34,4 +34,7 @@ public class ListingRequest {
     private String experience;
     private String vehicleType;
     private String rateInfo;
+
+    // Flexible per-category attributes as a JSON string (e.g. detailed property fields).
+    private String details;
 }

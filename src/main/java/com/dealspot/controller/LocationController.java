@@ -39,6 +39,22 @@ public class LocationController {
     }
 
     /**
+     * List taluks for a district (public). Pass the district's English name or
+     * its slug (e.g. "Dakshina Kannada" or "dakshina-kannada").
+     */
+    @GetMapping("/districts/{district}/taluks")
+    public ResponseEntity<List<String>> getTaluks(@PathVariable String district) {
+        // Accept either the slug form or the exact English name.
+        String resolved = locationService.getDistricts().stream()
+                .map(d -> d[0])
+                .filter(name -> name.equals(district)
+                        || name.toLowerCase().replace(" ", "-").equals(district.toLowerCase()))
+                .findFirst()
+                .orElse(district);
+        return ResponseEntity.ok(locationService.getTaluks(resolved));
+    }
+
+    /**
      * Set the authenticated user's preferred district.
      */
     @PutMapping("/users/me/district")

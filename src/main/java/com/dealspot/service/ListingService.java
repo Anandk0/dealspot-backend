@@ -26,6 +26,7 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final CloudinaryService cloudinaryService;
     private final CategoryService categoryService;
+    private final PaymentService paymentService;
 
     @Transactional
     public ListingResponse createListing(ListingRequest request, List<MultipartFile> images, User user) {
@@ -69,6 +70,7 @@ public class ListingService {
                 .experience(request.getExperience())
                 .vehicleType(request.getVehicleType())
                 .rateInfo(request.getRateInfo())
+                .details(request.getDetails())
                 .images(imageUrls)
                 .status(initialStatus)
                 .user(user)
@@ -85,11 +87,19 @@ public class ListingService {
     }
 
     public ListingResponse getListingById(Long id) {
+        return getListingById(id, null);
+    }
+
+    public ListingResponse getListingById(Long id, User viewer) {
         Listing listing = listingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
         listing.setViewCount(listing.getViewCount() + 1);
         listingRepository.save(listing);
-        return ListingResponse.fromEntity(listing);
+
+        // The private block of `details` (contact + exact map) is only revealed
+        // once the viewer has unlocked this listing (free category or paid).
+        boolean unlocked = viewer != null && paymentService.isContactUnlocked(viewer.getId(), id);
+        return ListingResponse.fromEntity(listing, unlocked);
     }
 
     public Page<ListingResponse> getMyListings(Long userId, int page, int size) {
@@ -124,6 +134,7 @@ public class ListingService {
         listing.setExperience(request.getExperience());
         listing.setVehicleType(request.getVehicleType());
         listing.setRateInfo(request.getRateInfo());
+        listing.setDetails(request.getDetails());
 
         if (newImages != null && !newImages.isEmpty()) {
             List<String> imageUrls = new ArrayList<>(listing.getImages() != null ? listing.getImages() : new ArrayList<>());
