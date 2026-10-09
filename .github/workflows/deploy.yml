@@ -23,5 +23,15 @@ jobs:
             git pull origin main
             mvn clean package -DskipTests -Dmaven.test.skip=true
             sudo systemctl restart dealspot
-            sleep 10
-            sudo systemctl is-active dealspot
+            # Poll for up to ~90s: Spring Boot + remote Neon DB can take a while
+            # to become ready, so don't fail the deploy on a slow (but healthy) start.
+            for i in $(seq 1 18); do
+              sleep 5
+              if curl -fsS http://127.0.0.1:8081/api/health > /dev/null 2>&1; then
+                echo "Backend healthy after $((i*5))s"
+                exit 0
+              fi
+            done
+            echo "Backend did not become healthy — recent logs:"
+            sudo journalctl -u dealspot -n 40 --no-pager
+            exit 1
